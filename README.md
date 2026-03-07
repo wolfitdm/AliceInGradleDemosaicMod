@@ -1,0 +1,3 @@
+AliceInGradleDemosaicMod
+
+Uncensor AliceInGradle
