@@ -104,6 +104,15 @@ namespace AliceInGradleDemosaicMod
             {
                 Logger.LogError(ex.ToString());
             }
+
+            try
+            {
+                PatchHarmonyMethodUnity(typeof(IMosaicDescriptor), "countMosaic", "countMosaic", true, false);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.ToString());
+            }
         }
 
         public static bool drawToMesh(ref bool __use_mosaic, Camera cam)
@@ -130,6 +139,12 @@ namespace AliceInGradleDemosaicMod
         public static bool setTarget(ref bool __use_mosaic, IMosaicDescriptor _Targ, bool force)
         {
             __use_mosaic = false;
+            return true;
+        }
+
+        public static bool countMosaic(ref int __result, bool only_on_sensitive)
+        {
+            __result = 0;
             return true;
         }
 
