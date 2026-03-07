@@ -94,11 +94,6 @@ namespace AliceInGradleDemosaicMod
 
             Type ftMosaic = MyGetType(typeof(MosaicShower), "FtMosaic");
 
-            if (ftMosaic == null)
-            {
-                Logger.LogInfo("no ttttt");
-            }
-
             if (ftMosaic != null) {
                 ftMosaicType = ftMosaic;
                 try
@@ -194,7 +189,6 @@ namespace AliceInGradleDemosaicMod
                 if (field != null)
                 {
                     field.SetValue(__instance, false);
-                    Logger.LogInfo("yeah exxx");
                     return true;
                 }
             }
@@ -202,8 +196,6 @@ namespace AliceInGradleDemosaicMod
             {
                 Logger.LogError(ex.ToString());
             }
-            
-            Logger.LogInfo("noooo");
             return false;
         }
 
@@ -235,14 +227,11 @@ namespace AliceInGradleDemosaicMod
             try
             {
                 ftMosaicTypeEnabled.SetValue(thisType, false);
-                Logger.LogInfo("yeah exxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
             }
             catch (Exception ex)
             {
                 Logger.LogError(ex.ToString());
             }
-
-            Logger.LogInfo("noooo");
             return false;
         }
 
