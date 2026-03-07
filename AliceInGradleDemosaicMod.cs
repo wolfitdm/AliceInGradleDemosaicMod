@@ -7,6 +7,7 @@ using nel;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Web;
 using UnityEngine;
 using XX;
 
@@ -24,8 +25,35 @@ namespace AliceInGradleDemosaicMod
         }
 
         public static Type MyGetType(string originalClassName)
-        {
+        { 
             return Type.GetType(originalClassName + ",Assembly-CSharp");
+        }
+
+        public static Type MyGetType(Type type, string originalClassName)
+        {
+            if (type == null)
+            {
+                return null;
+            }
+
+            Assembly ass = type.Assembly;
+
+            if (ass == null)
+            {
+                return null;
+            }
+
+            Type[] typesx = ass.GetTypes();
+
+            foreach (Type typex in typesx)
+            {
+                if (typex.Name == originalClassName)
+                {
+                    return typex;
+                }
+            }
+
+            return null;
         }
 
         public static Type MyGetTypeUnityEngine(string originalClassName)
@@ -36,6 +64,9 @@ namespace AliceInGradleDemosaicMod
         private static string pluginKey = "General.Toggles";
 
         public static bool enableMe = false;
+
+        private static Type ftMosaicType = null;
+        private static PropertyInfo ftMosaicTypeEnabled = null;
 
 
         private void Awake()
@@ -61,91 +92,192 @@ namespace AliceInGradleDemosaicMod
                 return;
             }
 
-            try
+            Type ftMosaic = MyGetType(typeof(MosaicShower), "FtMosaic");
+
+            if (ftMosaic == null)
             {
-                PatchHarmonyMethodUnity(typeof(MosaicShower), "drawToMesh", "drawToMesh", true, false);
-            } catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
+                Logger.LogInfo("no ttttt");
             }
 
-            try
-            {
-                PatchHarmonyMethodUnity(typeof(MosaicShower), "drawToMesh", "drawToMeshEx", true, false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
-            }
-
-            try
-            {
-                PatchHarmonyMethodUnity(typeof(MosaicShower), "FnDrawMosaic", "FnDrawMosaic", true, false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
+            if (ftMosaic != null) {
+                ftMosaicType = ftMosaic;
+                try
+                {
+                    ftMosaicTypeEnabled = ftMosaicType.GetProperty("enabled", BindingFlags.Public | BindingFlags.Instance);
+                }
+                catch (Exception e)
+                {
+                    ftMosaicTypeEnabled = null;
+                }
             }
 
-            try
-            {
-                PatchHarmonyMethodUnity(typeof(MosaicShower), "FnDrawMosaic", "FnDrawMosaicEx", true, false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
+            Type mosaicShower = typeof(MosaicShower);
+
+            Type[] types = new Type[] { ftMosaic, mosaicShower };
+
+            foreach (Type type in types) {
+                
+                if (type == null)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnity(type, "drawToMesh", "drawToMesh", true, false, new Type[] {typeof(Camera)});
+                } catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnity(type, "FnDrawMosaic", "FnDrawMosaic", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnity(type, "setTarget", "setTarget", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
             }
 
-            try
+            if (ftMosaic != null)
             {
-                PatchHarmonyMethodUnity(typeof(MosaicShower), "setTarget", "setTarget", true, false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
-            }
+                try
+                {
+                    PatchHarmonyMethodUnity(ftMosaic, "drawToMesh", "drawToMeshEx", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
 
-            try
-            {
-                PatchHarmonyMethodUnity(typeof(IMosaicDescriptor), "countMosaic", "countMosaic", true, false);
-            }
-            catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
+                try
+                {
+                    PatchHarmonyMethodUnity(ftMosaic, "countMosaic", "countMosaic", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
             }
         }
 
-        public static bool drawToMesh(ref bool __use_mosaic, Camera cam)
+        public static bool setUseMosaicToFalse(object __instance)
         {
-            __use_mosaic = false;
+            Type instanceType = __instance.GetType();
+            Type thisType = null;
+            
+            if (ftMosaicType != null && instanceType == ftMosaicType)
+            {
+                thisType = ftMosaicType;
+            } else if (instanceType == typeof(MosaicShower))
+            {
+                thisType = typeof(MosaicShower);
+            } else
+            {
+                thisType = instanceType;
+                return false;
+            }
+                
+            try
+            {
+                FieldInfo field = thisType.GetField("use_mosaic", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (field != null)
+                {
+                    field.SetValue(__instance, false);
+                    Logger.LogInfo("yeah exxx");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.ToString());
+            }
+            
+            Logger.LogInfo("noooo");
             return false;
         }
 
-        public static bool drawToMeshEx(Camera cam)
+        public static bool setEnabledToFalse(object __instance)
         {
+            Type instanceType = __instance.GetType();
+            Type thisType = null;
+
+            if (ftMosaicType != null && instanceType == ftMosaicType)
+            {
+                thisType = ftMosaicType;
+            }
+            else if (instanceType == typeof(MosaicShower))
+            {
+                thisType = typeof(MosaicShower);
+                return false; 
+            }
+            else
+            {
+                thisType = instanceType;
+                return false;
+            }
+
+            if (ftMosaicTypeEnabled == null)
+            {
+                return false; 
+            }
+
+            try
+            {
+                ftMosaicTypeEnabled.SetValue(thisType, false);
+                Logger.LogInfo("yeah exxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.ToString());
+            }
+
+            Logger.LogInfo("noooo");
             return false;
         }
 
-        public static bool FnDrawMosaic(ref bool __use_mosaic, object XCon, ProjectionContainer JCon, Camera Cam)
+        public static bool drawToMeshEx(object __instance)
         {
-            __use_mosaic = false;
+            setUseMosaicToFalse(__instance);
+            setEnabledToFalse(__instance);
+ 
+            return false;
+        }
+
+        public static bool drawToMesh(object __instance, Camera Cam)
+        {
+            setUseMosaicToFalse(__instance);
+            setEnabledToFalse(__instance);
+            return false;
+        }
+        public static bool FnDrawMosaic(object __instance, object XCon, ProjectionContainer JCon, Camera Cam)
+        {
+            setUseMosaicToFalse (__instance);
+            setEnabledToFalse(__instance);
             return false; 
         }
-        public static bool FnDrawMosaicEx(object XCon, ProjectionContainer JCon, Camera Cam)
+        public static bool setTarget(object __instance, IMosaicDescriptor _Targ, bool force)
         {
-            return false;
-        }
-
-        public static bool setTarget(ref bool __use_mosaic, IMosaicDescriptor _Targ, bool force)
-        {
-            __use_mosaic = false;
+            setUseMosaicToFalse(__instance);
             return true;
         }
 
-        public static bool countMosaic(ref int __result, bool only_on_sensitive)
+        public static bool countMosaic(object __instance, ref int __result, bool only_on_sensitive)
         {
+            setUseMosaicToFalse(__instance);
+            setEnabledToFalse(__instance);
             __result = 0;
-            return true;
+            return false;
         }
 
         public static void PatchHarmonyMethodUnity(Type originalClass, string originalMethodName, string patchedMethodName, bool usePrefix, bool usePostfix, Type[] parameters = null)
