@@ -4,7 +4,9 @@ using BepInEx.Logging;
 using BepInEx.Unity.Mono;
 using HarmonyLib;
 using m2d;
+using MapMagic.Nodes;
 using nel;
+using nel.gm;
 using Novell.Directory.Ldap.Utilclass;
 using PixelLiner;
 using Spine;
@@ -553,6 +555,9 @@ namespace AliceInGradleDemosaicMod
                 noel.UP.recheck();
                 noel.BetoMng.addTorned(noel, i, -1000);
                 noel.UP.recheck();
+
+                M2SerItem m2SerItem = noel.Ser.Get(SER.CLT_BROKEN);
+                noel.Ser.resetFlags();
                 noel.setOutfitType(PRNoel.OUTFIT.TORNED, true, true);
                 noel.setDefaultPose("damage_thunder");
                 noel.SpSetPose("damage_thunder");
@@ -565,7 +570,7 @@ namespace AliceInGradleDemosaicMod
                 GL.Begin(4);
                 int n = i <= 0 ? 0 : i;
                 long ran = Math.Min(MTR.ANoelBreakCloth.Length-1, n);
-                PxlFrame pxlFrame = MTR.ANoelBreakCloth[(long)ran % (long)MTR.ANoelBreakCloth.Length];
+                PxlFrame pxlFrame = MTR.ANoelBreakCloth[ran];
                 mdTemp.initForImg(pxlFrame.getLayer(0).Img);
                 BLIT.RenderToGLOneTask(mdTemp, mdTemp.getTriMax());
                 GL.End();
@@ -581,7 +586,6 @@ namespace AliceInGradleDemosaicMod
                 switch(outfit)
                 {
                     case "TORNED":
-                        outfitS = PRNoel.OUTFIT.TORNED;
                         break;
 
                     case "BABYDOLL":
@@ -597,6 +601,100 @@ namespace AliceInGradleDemosaicMod
                         break;
                 }
                 noel.setOutfitType(outfitS, true, true);
+            }
+
+            public static void unlockBenchMenu()
+            {
+                FieldInfo CmdBenchPeeField = typeof(UiBenchMenu).GetField("CmdBenchPee", BindingFlags.NonPublic | BindingFlags.Static);
+                FieldInfo ACmdField = typeof(UiBenchMenu).GetField("ACmd", BindingFlags.NonPublic | BindingFlags.Static);
+
+                object ACmdO = ACmdField != null ? ACmdField.GetValue(null) : null;
+                object CmdBenchPeeO = CmdBenchPeeField != null ? CmdBenchPeeField.GetValue(null) : null;
+
+                object[] ACmd = ACmdO != null ? (object[])ACmdO : null;
+                object CmdBenchPee = CmdBenchPeeO != null ? (object)CmdBenchPeeO : null;
+
+                if (ACmd == null)
+                {
+                    Logger.LogInfo("ACmd == null");
+                    return;
+                }
+
+                if (CmdBenchPee == null)
+                {
+                    Logger.LogInfo("CmdBenchPee == null");
+                    return;
+                }
+
+                for (int index = 0; index < ACmd.Length; ++index)
+                {
+                    object obj = ACmd[index];
+
+                    if (obj == null)
+                    {
+                        Logger.LogInfo(index + " is null");
+                        continue;
+                    }
+
+                    try
+                    {
+                        Traverse.Create(obj).Field("FnCanUse").SetValue(null);
+                    } catch (Exception ex) {
+                        Logger.LogInfo("FnCanUse == null here 1");
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    try
+                    {
+                        Traverse.Create(obj).Field("scn_enable").SetValue(true);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogInfo("scn_enable == null here 2");
+                        Logger.LogError(ex.ToString());
+                    }
+                }
+
+                try
+                {
+                    Traverse.Create(CmdBenchPee).Field("FnCanUse").SetValue(null);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogInfo("FnCanUse == null here 3");
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    Traverse.Create(CmdBenchPee).Field("scn_enable").SetValue(true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogInfo("scn_enable == null here 4");
+                    Logger.LogError(ex.ToString());
+                }
+            }
+
+            public static void unlockNoelCanPee()
+            {
+                init();
+                if (!isInit)
+                {
+                    return;
+                }
+                noel.Ser.Add(SER.NEAR_PEE);
+            }
+
+            public static void unlockNoelHaveSex()
+            {
+                init();
+                if (!isInit)
+                {
+                    return;
+                }
+                noel.Ser.Add(SER.FORBIDDEN_ORGASM);
+                noel.Ser.Add(SER.SEXERCISE);
             }
             public static void SetMoney(int value, uint max)
             {
@@ -811,11 +909,24 @@ namespace AliceInGradleDemosaicMod
             public static bool ImmuneToMapThorn = false;
             public static bool ImmuneToLava = false;
 
+            public static bool ImmuneToSleep = false;
+            public static bool ImmuneToConfuse = false;
+            public static bool ImmuneToParalysis = false;
+            public static bool ImmuneToBurn = false;
+            public static bool ImmuneToFrozen = false;
+            public static bool ImmuneToJamming = false;
+
             public static bool NoPervertDisableGrabAttack = false;
             public static bool NoPervertDisableEpDamage = false;
             public static bool NoPervertSkipGameOverPlay = false;
             public static bool NoPervertDisableWormTrap = false;
             public static bool NoPervertDisableHpAndAbsorbDamage = false;
+
+            public static string currentItemName = string.Empty;
+            public static int currentItemGrade = -1;
+            public static int currentItemAmount = 0;
+
+            public static bool addItemCmd = false;
 
             public static float hp_dmg_def = 0;
             public static float mp_dmg_def = 0;
@@ -952,6 +1063,24 @@ namespace AliceInGradleDemosaicMod
                 try
                 {
                     PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(NelNSlime), "runAbsorbOverDrive", "SuperNoelNoPervertDisableHpAndAbsorbDamage", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(M2Ser), "Add", "SuperNoelImmuneToOther", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(UiItemManageBox), "fnClickItemCmd", "SuperNoelAddItem", true, false);
                 }
                 catch (Exception ex)
                 {
@@ -1201,6 +1330,95 @@ namespace AliceInGradleDemosaicMod
                 {
                     return true;
                 }
+            }
+            private static bool SuperNoelImmuneToOther(ref SER ser, int __maxt, int max_level, bool add_to_pre_bits, ref M2SerItem __result)
+            {
+                bool cure_flag = false;
+                if (ser == SER.SLEEP && ImmuneToSleep)
+                {
+                    cure_flag = true;
+                }
+                else if (ser == SER.CONFUSE && ImmuneToConfuse)
+                {
+                    cure_flag = true;
+                }
+                else if (ser == SER.PARALYSIS && ImmuneToParalysis)
+                {
+                    cure_flag = true;
+                }
+                else if (ser == SER.BURNED && ImmuneToBurn)
+                {
+                    cure_flag = true;
+                }
+                else if (ser == SER.FROZEN && ImmuneToFrozen)
+                {
+                    cure_flag = true;
+                }
+                else if (ser == SER.JAMMING && ImmuneToJamming)
+                {
+                    cure_flag = true;
+                }
+                if (cure_flag)
+                {
+                    __result = null;
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+
+            private static Dictionary<string, string> NameToKey = new Dictionary<string, string>();
+
+            private static bool SuperNoelAddItem(ref aBtn B, ref UiItemManageBox __instance)
+            {
+                if (!addItemCmd)
+                {
+                    return true;
+                }
+                int count = currentItemAmount;
+                if ((B.title != "drop" && B.title != "discard_row" && B.title != "discard_water") || count == 0) { return true; }
+                string item_name = currentItemName;
+                NelItem Itm;
+                if (NelItem.OData.ContainsKey(item_name))
+                {
+                    Itm = NelItem.OData[item_name];
+                }
+                else if (NameToKey != null && NameToKey.ContainsKey(item_name) &&
+                    NelItem.OData.ContainsKey(NameToKey[item_name]))
+                {
+                    Itm = NelItem.OData[NameToKey[item_name]];
+                }
+                else
+                {
+                    Itm = __instance.UsingTarget;
+                }
+                if ((Itm.is_precious && Itm.key != "enhancer_slot" && Itm.key != "oc_slot") || Itm.is_cache_item || Itm.is_enhancer)
+                {
+                    Itm = __instance.UsingTarget;
+                }
+                int grade;
+                int new_grade = 5;
+                bool retain_grade_flag;
+                if (currentItemGrade != -1)
+                {
+                    new_grade = currentItemGrade;
+                    retain_grade_flag = false;
+                }
+                else
+                {
+                    retain_grade_flag = true;
+                }
+                grade = Itm.individual_grade ? 0 : retain_grade_flag ? __instance.get_grade_cursor() : new_grade - 1;
+                if (count > 0)
+                {
+                    NelItemManager.NelItemDrop nelItemDrop = __instance.IMNG.dropManual(Itm, count, grade,
+                        __instance.Pr.x, __instance.Pr.y, X.NIXP(-0.003f, -0.07f) * (float)CAim._XD(__instance.Pr.aim, 1),
+                        X.NIXP(-0.01f, -0.04f), null, false);
+                    nelItemDrop.discarded = true;
+                }
+                return true;
             }
         }
         public static class NoelPervert
@@ -1525,7 +1743,7 @@ namespace AliceInGradleDemosaicMod
 
         public static class DebugMe
         {
-            public static bool DebugThis = true;
+            public static bool DebugThis = false;
 
             public static void ExecuteHarmonyPatches()
             {
@@ -1541,12 +1759,11 @@ namespace AliceInGradleDemosaicMod
 
             public static bool runBetobeto(object __instance, ref bool __result, int cur_dirt, BetobetoManager BCon)
             {
-                Logger.LogInfo("execute runBetobeto");
                 if (!DebugThis)
                 {
                     return true;
                 }
-
+                Logger.LogInfo("execute runBetobeto");
                 nel.BetobetoManager.SvTexture _this = (nel.BetobetoManager.SvTexture) __instance;
                 bool flag1 = _this.dirt_index < 0;
                 if ((UnityEngine.Object)_this.prepareTexture() == (UnityEngine.Object)null)
@@ -1653,6 +1870,7 @@ namespace AliceInGradleDemosaicMod
                             ran = BCon.GETRAN2(num9 * 13 + ((int)ran & (int)byte.MaxValue), num9 % 7 + ((int)ran & 7));
                             Logger.LogInfo("ran: " + ran.ToString());
                             PxlFrame pxlFrame = MTR.ANoelBreakCloth[(long)ran % (long)MTR.ANoelBreakCloth.Length];
+                            pxlFrame = MTR.ANoelBreakCloth[MTR.ANoelBreakCloth.Length - 1];
                             mdTemp.initForImg(pxlFrame.getLayer(0).Img);
                             mdTemp.RotaGraph(X.RAN(ran, 453) * (float)Base.width, X.RAN(ran, 1280 /*0x0500*/) * (float)Base.height, X.NI(2.2f, 2.7f, X.RAN(ran, 1143)), X.RAN(ran, 1212) * 6.28318548f, flip: (double)X.RAN(ran, 567) < 0.5);
                             BLIT.RenderToGLOneTask(mdTemp, mdTemp.getTriMax());
@@ -1882,7 +2100,9 @@ namespace AliceInGradleDemosaicMod
         bool foldoutOther = false;
         bool foldoutTornClothes = false;
         bool foldoutChangeOutfit = false;
-        string weatherText = "";
+        bool foldoutUnlockables = false;
+        bool foldoutAddItem = false;
+        string weatherText = "0110111";
         int money = 0;
         int level = 0;
         int dangerLevel = 0;
@@ -1972,6 +2192,36 @@ namespace AliceInGradleDemosaicMod
                     SuperNoel.ImmuneToLava = !SuperNoel.ImmuneToLava;
                 });
 
+                toggleButton("ImmuneToSleep", SuperNoel.ImmuneToSleep, () =>
+                {
+                    SuperNoel.ImmuneToSleep = !SuperNoel.ImmuneToSleep;
+                });
+
+                toggleButton("ImmuneToConfuse", SuperNoel.ImmuneToConfuse, () =>
+                {
+                    SuperNoel.ImmuneToConfuse = !SuperNoel.ImmuneToConfuse;
+                });
+
+                toggleButton("ImmuneToParalysis", SuperNoel.ImmuneToParalysis, () =>
+                {
+                    SuperNoel.ImmuneToParalysis = !SuperNoel.ImmuneToParalysis;
+                });
+
+                toggleButton("ImmuneToBurn", SuperNoel.ImmuneToBurn, () =>
+                {
+                    SuperNoel.ImmuneToBurn = !SuperNoel.ImmuneToBurn;
+                });
+
+                toggleButton("ImmuneToFrozen", SuperNoel.ImmuneToFrozen, () =>
+                {
+                    SuperNoel.ImmuneToFrozen = !SuperNoel.ImmuneToFrozen;
+                });
+
+                toggleButton("ImmuneToJamming", SuperNoel.ImmuneToJamming, () =>
+                {
+                    SuperNoel.ImmuneToJamming = !SuperNoel.ImmuneToJamming;
+                });
+
                 toggleButton("NoPervertDisableGrabAttack", SuperNoel.NoPervertDisableGrabAttack, () =>
                 {
                     SuperNoel.NoPervertDisableGrabAttack = !SuperNoel.NoPervertDisableGrabAttack;
@@ -1995,6 +2245,20 @@ namespace AliceInGradleDemosaicMod
                 toggleButton("NoPervertDisableHpAndAbsorbDamage", SuperNoel.NoPervertDisableHpAndAbsorbDamage, () =>
                 {
                     SuperNoel.NoPervertDisableHpAndAbsorbDamage = !SuperNoel.NoPervertDisableHpAndAbsorbDamage;
+                });
+            }
+
+            foldoutAddItem = EditorLikeFoldout(foldoutAddItem, "Super Noel Add Item");
+
+            if (foldoutAddItem)
+            {
+                SuperNoel.currentItemName = GUILayout.TextField(SuperNoel.currentItemName, 100, GUILayout.Width(100));
+                SuperNoel.currentItemAmount = (int)slider("Item Amount", (float)SuperNoel.currentItemAmount, 0, 1000);
+                SuperNoel.currentItemGrade = (int)slider("Item Grade", (float)SuperNoel.currentItemGrade, -1, 100);
+
+                actionButton($"Add Item {SuperNoel.currentItemName} {SuperNoel.currentItemAmount} {SuperNoel.currentItemGrade}", () =>
+                {
+                    SuperNoel.addItemCmd = true;
                 });
             }
 
@@ -2026,10 +2290,16 @@ namespace AliceInGradleDemosaicMod
                 {
                     NoelPervert.PervertEPDamageMultiplier = !NoelPervert.PervertEPDamageMultiplier;
                 });
+                
                 if (NoelPervert.PervertEPDamageMultiplier)
                 {
                     NoelPervert.EPDamageMultiplier = slider("EPDamageMultiplier", NoelPervert.EPDamageMultiplier, 0, 1000000);
                 }
+
+                toggleButton("Always Full Break Clothes", DebugMe.DebugThis, () =>
+                {
+                    DebugMe.DebugThis = !DebugMe.DebugThis;
+                });
             }
 
             foldoutChangeOutfit = EditorLikeFoldout(foldoutChangeOutfit, "Noel Change Outfit");
@@ -2045,6 +2315,26 @@ namespace AliceInGradleDemosaicMod
                         SetGameValues.changeOutFit(f);
                     });
                 }
+            }
+
+            foldoutUnlockables = EditorLikeFoldout(foldoutUnlockables, "Noel Unlockables");
+
+            if (foldoutUnlockables)
+            {
+                actionButton("Unlock Bench Menu", () =>
+                {
+                    SetGameValues.unlockBenchMenu();
+                });
+
+                actionButton("Unlock Noel Can Pee", () =>
+                {
+                    SetGameValues.unlockNoelCanPee();
+                });
+
+                actionButton("Unlock Noel Have Much Sex Experiences", () =>
+                {
+                    SetGameValues.unlockNoelHaveSex();
+                });
             }
 
             foldoutSetDanger = EditorLikeFoldout(foldoutSetDanger, "Moel Set Danger Level");
@@ -2080,18 +2370,6 @@ namespace AliceInGradleDemosaicMod
                 });
             }
 
-            foldoutTornClothes = EditorLikeFoldout(foldoutTornClothes, "Torn Clothes");
-
-            if (foldoutTornClothes)
-
-            {
-                level = (int)slider("level", level, -999, 999);
-                actionButton($"Torn Clothes {level}", () =>
-                {
-                    SetGameValues.tornClothes(level);
-                });
-            }
-
             foldoutOther = EditorLikeFoldout(foldoutOther, "Misc");
 
             if (foldoutOther)
@@ -2109,6 +2387,18 @@ namespace AliceInGradleDemosaicMod
                 actionButton($"Plant Eggs", () =>
                 {
                     SetGameValues.PlantEggs();
+                });
+            }
+
+            foldoutTornClothes = EditorLikeFoldout(foldoutTornClothes, "Torn Clothes (Not Safe)");
+
+            if (foldoutTornClothes)
+
+            {
+                level = (int)slider("level", level, -999, 999);
+                actionButton($"Torn Clothes {level}", () =>
+                {
+                    SetGameValues.tornClothes(level);
                 });
             }
 
@@ -2330,17 +2620,49 @@ namespace AliceInGradleDemosaicMod
             return false;
         }
 
+        public static bool callDestruct(object __instance, bool set = false)
+        {
+            try
+            {
+                Type instanceType = __instance.GetType();
+                Type thisType = null;
+
+                if (set)
+                {
+                    return false;
+                }
+
+                if (ftMosaicType != null && instanceType == ftMosaicType)
+                {
+                    thisType = ftMosaicType;
+                    ((MosaicShower)__instance).destruct();
+                    return true;
+                }
+                else if (instanceType == typeof(MosaicShower))
+                {
+                    thisType = typeof(MosaicShower);
+                    ((MosaicShower)__instance).destruct();
+                    return true;
+                }
+                return false;
+            } catch
+            {
+                return false; 
+            }
+        }
+
         public static bool drawToMeshEx(object __instance)
         {
             if (!UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
-
+            callDestruct(__instance);
             return false;
         }
 
@@ -2350,22 +2672,27 @@ namespace AliceInGradleDemosaicMod
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
+            callDestruct(__instance);
             return false;
         }
-        public static bool FnDrawMosaic(object __instance, object XCon, ProjectionContainer JCon, Camera Cam)
+        public static bool FnDrawMosaic(object __instance, object XCon, ProjectionContainer JCon, Camera Cam, ref bool __result)
         {
             if (!UNCENSOR)
             {
-                setEnabledToFalse(true);
-                setUseMosaicToFalse(true);
+                setEnabledToFalse(__instance, true);
+                setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
+            callDestruct(__instance);
+            __result = false;
             return false;
         }
         public static bool setTarget(object __instance, IMosaicDescriptor _Targ, bool force)
@@ -2374,10 +2701,12 @@ namespace AliceInGradleDemosaicMod
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
+            callDestruct(__instance);
 
             return true;
         }
@@ -2386,12 +2715,14 @@ namespace AliceInGradleDemosaicMod
         {
             if (!UNCENSOR)
             {
-                setEnabledToFalse(true);
-                setUseMosaicToFalse(true);
+                setEnabledToFalse(__instance, true);
+                setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
+            callDestruct(__instance);
 
             __result = 0;
             return false;
@@ -2400,12 +2731,14 @@ namespace AliceInGradleDemosaicMod
         {
             if (!UNCENSOR)
             {
-                setEnabledToFalse(true);
-                setUseMosaicToFalse(true);
+                setEnabledToFalse(__instance, true);
+                setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
+            callDestruct(__instance);
 
             __result = 0;
             return false;
@@ -2420,10 +2753,12 @@ namespace AliceInGradleDemosaicMod
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
+            callDestruct(__instance);
 
             __result = false;
             return false;
@@ -2440,10 +2775,12 @@ namespace AliceInGradleDemosaicMod
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
+                callDestruct(__instance, true);
                 return true;
             }
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
+            callDestruct(__instance);
 
             __result = false;
             return false;
