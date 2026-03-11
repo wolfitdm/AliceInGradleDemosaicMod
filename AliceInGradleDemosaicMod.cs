@@ -3,6 +3,7 @@ using BepInEx.Configuration;
 using BepInEx.Logging;
 using BepInEx.Unity.Mono;
 using HarmonyLib;
+using JetBrains.Annotations;
 using m2d;
 using MapMagic.Nodes;
 using nel;
@@ -13,11 +14,13 @@ using Spine;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Reflection;
 using System.Web;
 using UnityEngine;
 using UnityEngine.NVIDIA;
 using XX;
+using static nel.QuestTracker;
 using static nel.UiHkdsChat;
 using static NetworkDebugStart;
 
@@ -31,6 +34,131 @@ namespace AliceInGradleDemosaicMod
         private static ConfigEntry<bool> configEnableMe;
         private static ConfigEntry<bool> configMenuDefaultOpen;
         private static ConfigEntry<KeyCode> configKeyCodeToOpenCheatMenu;
+        private static ConfigEntry<bool> saveSettingsInConfig;
+        private static Dictionary<string, ConfigEntry<bool>> configEntries = new Dictionary<string, ConfigEntry<bool>>();
+        private static Dictionary<string, bool> configEntriesFirstSet = new Dictionary<string, bool>();
+        private static Dictionary<string, ConfigEntry<float>> configEntriesFloat = new Dictionary<string, ConfigEntry<float>>();
+        private static Dictionary<string, float> configEntriesFirstSetFloat = new Dictionary<string, float>();
+        private static AliceInGradleDemosaicMod Instance = null;
+
+        private static ConfigEntry<bool> getConfigEntry(string section, string var, bool defaultValue = false)
+        {
+            if (Instance == null)
+            {
+                return null;
+            }
+
+            if (!configEntries.ContainsKey(var))
+            {
+                ConfigEntry<bool> setC = Instance.Config.Bind(section, var, defaultValue, $"{var}, default {defaultValue}");
+                configEntries.Add(var, setC);
+            }
+
+            return configEntries[var];
+        }
+
+        private static bool updateVarFirst(string section, string var, bool defaultValue = false)
+        {
+            ConfigEntry<bool> setC = getConfigEntry(section, var, defaultValue);
+
+            if (setC == null)
+            {
+                return false;
+            }
+
+            if (!configEntriesFirstSet.ContainsKey(var))
+            {
+
+                configEntriesFirstSet.Add(var, saveSettingsInConfig.Value ? setC.Value : defaultValue);
+            }
+
+            bool set = defaultValue;
+
+            if (saveSettingsInConfig.Value)
+            {
+                set = setC.Value = configEntriesFirstSet[var];
+            }
+
+            return set;
+        }
+
+        private static void updateVarSecond(string section, string var, bool set)
+        {
+            ConfigEntry<bool> setC = getConfigEntry(section, var);
+
+            if (setC == null)
+            {
+                return;
+            }
+
+            configEntriesFirstSet[var] = set;
+
+            if (saveSettingsInConfig.Value)
+            {
+                setC.Value = configEntriesFirstSet[var];
+            }
+
+            return;
+        }
+
+        private static ConfigEntry<float> getConfigEntryFloat(string section, string var, float defaultValue = 0)
+        {
+            if (Instance == null)
+            {
+                return null;
+            }
+
+            if (!configEntriesFloat.ContainsKey(var))
+            {
+                ConfigEntry<float> setC = Instance.Config.Bind(section, var, 0f, $"{var}, default {defaultValue}");
+                configEntriesFloat.Add(var, setC);
+            }
+
+            return configEntriesFloat[var];
+        }
+
+        private static float updateVarFirstFloat(string section, string var, float defaultValue = 0)
+        {
+            ConfigEntry<float> setC = getConfigEntryFloat(section, var, defaultValue);
+
+            if (setC == null)
+            {
+                return 0;
+            }
+
+            if (!configEntriesFirstSetFloat.ContainsKey(var))
+            {
+                configEntriesFirstSetFloat.Add(var, saveSettingsInConfig.Value ? setC.Value : defaultValue);
+            }
+
+            float set = defaultValue;
+
+            if (saveSettingsInConfig.Value)
+            {
+                set = setC.Value = configEntriesFirstSetFloat[var];
+            }
+
+            return set;
+        }
+
+        private static void updateVarSecondFloat(string section, string var, float set)
+        {
+            ConfigEntry<float> setC = getConfigEntryFloat(section, var);
+
+            if (setC == null)
+            {
+                return;
+            }
+
+            configEntriesFirstSetFloat[var] = set;
+
+            if (saveSettingsInConfig.Value)
+            {
+                setC.Value = configEntriesFirstSetFloat[var];
+            }
+
+            return;
+        }
 
         public static bool showMenu = false;
 
@@ -107,15 +235,27 @@ namespace AliceInGradleDemosaicMod
                       true,
                      "Is menu default opened, default true");
 
+            saveSettingsInConfig = Config.Bind(pluginKey,
+                                              "SaveSettingsInConfig",
+                                              false,
+                                             "Whether or not you want save settings in config (default false also no, you do not want it, and true = yes)");
+
             configKeyCodeToOpenCheatMenu = Config.Bind(pluginKey,
                                              "KeyCodeToOpenCloseTheCheatsMenu",
                                              KeyCode.R,
                                             "KeyCode to open/close the cheats menu, default R");
 
+            Instance = this;
+
             enableMe = configEnableMe.Value;
             showMenu = configMenuDefaultOpen.Value;
 
             keyCodeToOpenCloseTheCheatsMenu = configKeyCodeToOpenCheatMenu.Value;
+
+            Debug.initDebugVars();
+            SuperNoel.initSuperNoelVars();
+            NoelPervert.initNoelPervertVars();
+            DebugMe.initDebugMeVars();
 
             PatchAllHarmonyMethods();
 
@@ -169,7 +309,7 @@ namespace AliceInGradleDemosaicMod
             }
 
             // Fenster zentriert anzeigen
-            windowRect = GUI.Window(0, windowRect, DrawCheatWindow, "!!! Alice In Gradlw Cheat Menu !!!");
+            windowRect = GUI.Window(0, windowRect, DrawCheatWindow, "!!! Alice In Gradle Cheat Menu !!!");
         }
         private bool EditorLikeFoldout(bool foldout, string title)
         {
@@ -181,329 +321,6 @@ namespace AliceInGradleDemosaicMod
             }
             GUILayout.EndHorizontal();
             return foldout;
-        }
-
-
-        public static bool UNCENSOR = true;
-
-        public static bool DEBUG = true;
-
-        public static bool DEBUGNOCFG = false;
-
-        public static bool DEBUGSUPERSENSITIVE = false;
-
-        public static bool DEBUGANNOUNCE = false;
-
-        public static bool DEBUGNOSND = false;
-
-        public static bool DEBUG_PLAYER = false;
-
-        public static bool DEBUGALLSKILL = false;
-
-        public static bool DEBUGNOEVENT = false;
-
-        public static bool DEBUGNOVOICE = false;
-
-        public static bool DEBUGRELOADMTR = false;
-
-        public static bool DEBUGTIMESTAMP = false;
-
-        public static bool DEBUGALBUMUNLOCK = false;
-
-        public static bool DEBUGSTABILIZE_DRAW = false;
-
-        public static bool DEBUGMIGHTY = false;
-
-        public static bool DEBUGNODAMAGE = false;
-
-        public static bool DEBUGWEAK = false;
-
-        public static bool DEBUGBENCHMARK = false;
-
-        public static bool DEBUGSUPERCYCLONE = false;
-
-        public static bool ENG_MODE = false;
-
-        public static bool DEBUGSPEFFECT = false;
-
-        private static string st(string text)
-        {
-            bool set = false;
-            try
-            {
-                switch (text)
-                {
-                    case "UNCENSOR":
-                        {
-                            set = UNCENSOR;
-                        }
-                        break;
-
-                    case "DEBUG":
-                        {
-                            set = DEBUG;
-                        }
-                        break;
-
-                    case "DEBUGNOCFG":
-                        {
-                            set = DEBUGNOCFG;
-                        }
-                        break;
-
-                    case "DEBUGSUPERSENSITIVE":
-                        {
-                            set = DEBUGSUPERSENSITIVE;
-                        }
-                        break;
-
-                    case "DEBUGANNOUNCE":
-                        {
-                            set = DEBUGANNOUNCE;
-                        }
-                        break;
-
-                    case "DEBUGNOSND":
-                        {
-                            set = DEBUGNOSND;
-                        }
-                        break;
-
-                    case "DEBUGPLAYER":
-                        {
-                            set = DEBUG_PLAYER;
-                        }
-                        break;
-
-                    case "DEBUGALLSKILL":
-                        {
-                            set = DEBUGALLSKILL;
-                        }
-                        break;
-
-                    case "DEBUGNOEVENT":
-                        {
-                            set = DEBUGNOEVENT;
-                        }
-                        break;
-
-                    case "DEBUGNOVOICE":
-                        {
-                            set = DEBUGNOVOICE;
-                        }
-                        break;
-
-                    case "DEBUGRELOADMTR":
-                        {
-                            set = DEBUGRELOADMTR;
-                        }
-                        break;
-
-                    case "DEBUGTIMESTAMP":
-                        {
-                            set = DEBUGTIMESTAMP;
-                        }
-                        break;
-
-                    case "DEBUGALBUMUNLOCK":
-                        {
-                            set = DEBUGALBUMUNLOCK;
-                        }
-                        break;
-
-                    case "DEBUGSTABILIZE_DRAW":
-                        {
-                            set = DEBUGSTABILIZE_DRAW;
-                        }
-                        break;
-
-                    case "DEBUGMIGHTY":
-                        {
-                            set = DEBUGMIGHTY;
-                        }
-                        break;
-
-                    case "DEBUGNODAMAGE":
-                        {
-                            set = DEBUGNODAMAGE;
-                        }
-                        break;
-
-                    case "DEBUGWEAK":
-                        {
-                            set = DEBUGWEAK;
-                        }
-                        break;
-
-                    case "DEBUGBENCHMARK":
-                        {
-                            set = DEBUGBENCHMARK;
-                        }
-                        break;
-
-                    case "DEBUGSUPERCYCLONE":
-                        {
-                            set = DEBUGSUPERCYCLONE;
-                        }
-                        break;
-
-                    case "DEBUGENG_MODE":
-                        {
-                            set = ENG_MODE;
-                        }
-                        break;
-
-                    case "DEBUGSPEFFECT":
-                        {
-                            set = DEBUGSPEFFECT;
-                        }
-                        break;
-                }
-            } catch (Exception ex)
-            {
-            }
-
-            string ret = text.Replace("DEBUG", "DEBUG: ") + ": " + (set ? "ON" : "OFF");
-
-            return ret;
-        }
-
-        private static void updateVar(string text)
-        {
-            try
-            {
-                switch (text)
-                {
-                    case "UNCENSOR":
-                        {
-                            UNCENSOR = !UNCENSOR;
-                        }
-                        break;
-
-                    case "DEBUG":
-                        {
-                            X.DEBUG = DEBUG = !DEBUG;
-                        }
-                        break;
-
-                    case "DEBUGNOCFG":
-                        {
-                            X.DEBUGNOCFG = DEBUGNOCFG = !DEBUGNOCFG;
-                        }
-                        break;
-
-                    case "DEBUGSUPERSENSITIVE":
-                        {
-                            X.DEBUGSUPERSENSITIVE = DEBUGSUPERSENSITIVE = !DEBUGSUPERSENSITIVE;
-                        }
-                        break;
-
-                    case "DEBUGANNOUNCE":
-                        {
-                            X.DEBUGANNOUNCE = DEBUGANNOUNCE = !DEBUGANNOUNCE;
-                        }
-                        break;
-
-                    case "DEBUGNOSND":
-                        {
-                            X.DEBUGNOSND = DEBUGNOSND = !DEBUGNOSND;
-                        }
-                        break;
-
-                    case "DEBUGPLAYER":
-                        {
-                            X.DEBUG_PLAYER = DEBUG_PLAYER = !DEBUG_PLAYER;
-                        }
-                        break;
-
-                    case "DEBUGALLSKILL":
-                        {
-                            X.DEBUGALLSKILL = DEBUGALLSKILL = !DEBUGALLSKILL;
-                        }
-                        break;
-
-                    case "DEBUGNOEVENT":
-                        {
-                            X.DEBUGNOEVENT = DEBUGNOEVENT = !DEBUGNOEVENT;
-                        }
-                        break;
-
-                    case "DEBUGNOVOICE":
-                        {
-                            X.DEBUGNOVOICE = DEBUGNOVOICE = !DEBUGNOVOICE;
-                        }
-                        break;
-
-                    case "DEBUGRELOADMTR":
-                        {
-                            X.DEBUGRELOADMTR = DEBUGRELOADMTR = !DEBUGRELOADMTR;
-                        }
-                        break;
-
-                    case "DEBUGTIMESTAMP":
-                        {
-                            X.DEBUGTIMESTAMP = DEBUGTIMESTAMP = !DEBUGTIMESTAMP;
-                        }
-                        break;
-
-                    case "DEBUGALBUMUNLOCK":
-                        {
-                            X.DEBUGALBUMUNLOCK = DEBUGALBUMUNLOCK = !DEBUGALBUMUNLOCK;
-                        }
-                        break;
-
-                    case "DEBUGSTABILIZE_DRAW":
-                        {
-                            X.DEBUGSTABILIZE_DRAW = DEBUGSTABILIZE_DRAW = !DEBUGSTABILIZE_DRAW;
-                        }
-                        break;
-
-                    case "DEBUGMIGHTY":
-                        {
-                            X.DEBUGMIGHTY = DEBUGMIGHTY = !DEBUGMIGHTY;
-                        }
-                        break;
-
-                    case "DEBUGNODAMAGE":
-                        {
-                            X.DEBUGNODAMAGE = DEBUGNODAMAGE = !DEBUGNODAMAGE;
-                        }
-                        break;
-
-                    case "DEBUGWEAK":
-                        {
-                            X.DEBUGWEAK = DEBUGWEAK = !DEBUGWEAK;
-                        }
-                        break;
-
-                    case "DEBUGBENCHMARK":
-                        {
-                            X.DEBUGBENCHMARK = DEBUGBENCHMARK = !DEBUGBENCHMARK;
-                        }
-                        break;
-
-                    case "DEBUGSUPERCYCLONE":
-                        {
-                            X.DEBUGSUPERCYCLONE = DEBUGSUPERCYCLONE = !DEBUGSUPERCYCLONE;
-                        }
-                        break;
-
-                    case "DEBUGENG_MODE":
-                        {
-                            X.ENG_MODE = ENG_MODE = !ENG_MODE;
-                        }
-                        break;
-
-                    case "DEBUGSPEFFECT":
-                        {
-                            X.DEBUGSPEFFECT = DEBUGSPEFFECT = !DEBUGSPEFFECT;
-                        }
-                        break;
-                }
-            }
-            catch (Exception ex)
-            {
-            }
         }
 
         public static class SetGameValues
@@ -874,6 +691,28 @@ namespace AliceInGradleDemosaicMod
                 }
                 noel.recheck_emot = true;
             }
+
+            public static void uncensorRestRoomPee(bool uncensor = true)
+            {
+                Directory.CreateDirectory("BepInEx/textures/original");
+                Directory.CreateDirectory("BepInEx/textures/mod");
+                Directory.CreateDirectory("AliceInCradle_Data/StreamingAssets/EvImg");
+
+                if (!File.Exists("BepInEx/textures/original/__events_restroom.pxls.bytes.texture_0.dat"))
+                {
+                    File.Copy("AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat", "BepInEx/textures/original/__events_restroom.pxls.bytes.texture_0.dat");
+                }
+
+                string targetDir = uncensor ? "mod" : "original";
+                if (File.Exists($"BepInEx/textures/{targetDir}/__events_restroom.pxls.bytes.texture_0.dat"))
+                {
+                    if (File.Exists("AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat"))
+                    {
+                        File.Delete("AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat");
+                    }
+                    File.Copy($"BepInEx/textures/{targetDir}/__events_restroom.pxls.bytes.texture_0.dat", "AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat");
+                }
+            }
         }
 
         public static void PatchHarmonyMethodsUnityPrefix(Type uniqueType, Type[] types, string original, string patched)
@@ -895,6 +734,428 @@ namespace AliceInGradleDemosaicMod
                 catch (Exception ex)
                 {
                     Logger.LogError(ex.ToString());
+                }
+            }
+        }
+
+        public static class Debug
+        {
+            public static bool UNCENSOR = true;
+
+            public static bool UNCENSOR_RESTROOM = true;
+
+            public static bool DEBUG = true;
+
+            public static bool DEBUGNOCFG = false;
+
+            public static bool DEBUGSUPERSENSITIVE = false;
+
+            public static bool DEBUGANNOUNCE = false;
+
+            public static bool DEBUGNOSND = false;
+
+            public static bool DEBUG_PLAYER = false;
+
+            public static bool DEBUGALLSKILL = false;
+
+            public static bool DEBUGNOEVENT = false;
+
+            public static bool DEBUGNOVOICE = false;
+
+            public static bool DEBUGRELOADMTR = false;
+
+            public static bool DEBUGTIMESTAMP = false;
+
+            public static bool DEBUGALBUMUNLOCK = false;
+
+            public static bool DEBUGSTABILIZE_DRAW = false;
+
+            public static bool DEBUGMIGHTY = false;
+
+            public static bool DEBUGNODAMAGE = false;
+
+            public static bool DEBUGWEAK = false;
+
+            public static bool DEBUGBENCHMARK = false;
+
+            public static bool DEBUGSUPERCYCLONE = false;
+
+            public static bool ENG_MODE = false;
+
+            public static bool DEBUGSPEFFECT = false;
+
+            public static void initDebugVars()
+            {
+                UNCENSOR = updateVarFirst("Debug", "UNCENSOR", true);
+
+                UNCENSOR_RESTROOM = updateVarFirst("Debug", "UNCENSOR_RESTROOM");
+
+                DEBUG = updateVarFirst("Debug", "DEBUG", true);
+
+                DEBUGNOCFG = updateVarFirst("Debug", "DEBUGNOCFG");
+
+                DEBUGSUPERSENSITIVE = updateVarFirst("Debug", "DEBUGSUPERSENSITIVE");
+
+                DEBUGANNOUNCE = updateVarFirst("Debug", "DEBUGANNOUNCE");
+
+                DEBUGNOSND = updateVarFirst("Debug", "DEBUGNOSND");
+
+                DEBUG_PLAYER = updateVarFirst("Debug", "DEBUGPLAYER");
+
+                DEBUGALLSKILL = updateVarFirst("Debug", "DEBUGALLSKILL");
+
+                DEBUGNOEVENT = updateVarFirst("Debug", "DEBUGNOEVENT");
+
+                DEBUGNOVOICE = updateVarFirst("Debug", "DEBUGNOVOICE");
+
+                DEBUGRELOADMTR = updateVarFirst("Debug", "DEBUGRELOADMTR");
+
+                DEBUGTIMESTAMP = updateVarFirst("Debug", "DEBUGTIMESTAMP");
+
+                DEBUGALBUMUNLOCK = updateVarFirst("Debug", "DEBUGALBUMUNLOCK");
+
+                DEBUGSTABILIZE_DRAW = updateVarFirst("Debug", "DEBUGSTABILIZE_DRAW");
+
+                DEBUGMIGHTY = updateVarFirst("Debug", "DEBUGMIGHTY");
+
+                DEBUGNODAMAGE = updateVarFirst("Debug", "DEBUGNODAMAGE");
+
+                DEBUGBENCHMARK = updateVarFirst("Debug", "DEBUGBENCHMARK");
+
+                DEBUGSUPERCYCLONE = updateVarFirst("Debug", "DEBUGSUPERCYCLONE");
+
+                ENG_MODE = updateVarFirst("Debug", "ENG_MODE");
+
+                DEBUGSPEFFECT = updateVarFirst("Debug", "DEBUGSPEFFECT");
+            }
+
+            public static void updateDebugVars()
+            {
+                if (!saveSettingsInConfig.Value)
+                {
+                    return;
+                }
+
+                updateVarSecond("Debug", "UNCENSOR", UNCENSOR);
+
+                updateVarSecond("Debug", "UNCENSOR_RESTROOM", UNCENSOR_RESTROOM);
+
+                updateVarSecond("Debug", "DEBUG", DEBUG);
+
+                updateVarSecond("Debug", "DEBUGNOCFG", DEBUGNOCFG);
+
+                updateVarSecond("Debug", "DEBUGSUPERSENSITIVE", DEBUGSUPERSENSITIVE);
+
+                updateVarSecond("Debug", "DEBUGANNOUNCE", DEBUGANNOUNCE);
+
+                updateVarSecond("Debug", "DEBUGNOSND", DEBUGNOSND);
+
+                updateVarSecond("Debug", "DEBUGPLAYER", DEBUG_PLAYER);
+
+                updateVarSecond("Debug", "DEBUGALLSKILL", DEBUGALLSKILL);
+
+                updateVarSecond("Debug", "DEBUGNOEVENT", DEBUGNOEVENT);
+
+                updateVarSecond("Debug", "DEBUGNOVOICE", DEBUGNOVOICE);
+
+                updateVarSecond("Debug", "DEBUGRELOADMTR", DEBUGRELOADMTR);
+
+                updateVarSecond("Debug", "DEBUGTIMESTAMP", DEBUGTIMESTAMP);
+
+                updateVarSecond("Debug", "DEBUGALBUMUNLOCK", DEBUGALBUMUNLOCK);
+
+                updateVarSecond("Debug", "DEBUGSTABILIZE_DRAW", DEBUGSTABILIZE_DRAW);
+
+                updateVarSecond("Debug", "DEBUGMIGHTY", DEBUGMIGHTY);
+
+                updateVarSecond("Debug", "DEBUGNODAMAGE", DEBUGNODAMAGE);
+
+                updateVarSecond("Debug", "DEBUGBENCHMARK", DEBUGBENCHMARK);
+
+                updateVarSecond("Debug", "DEBUGSUPERCYCLONE", DEBUGSUPERCYCLONE);
+
+                updateVarSecond("Debug", "ENG_MODE", ENG_MODE);
+
+                updateVarSecond("Debug", "DEBUGSPEFFECT", DEBUGSPEFFECT);
+            }
+            public static string st(string text)
+            {
+                bool set = false;
+                try
+                {
+                    switch (text)
+                    {
+                        case "UNCENSOR":
+                            {
+                                set = UNCENSOR;
+                            }
+                            break;
+
+                        case "DEBUG":
+                            {
+                                set = DEBUG;
+                            }
+                            break;
+
+                        case "DEBUGNOCFG":
+                            {
+                                set = DEBUGNOCFG;
+                            }
+                            break;
+
+                        case "DEBUGSUPERSENSITIVE":
+                            {
+                                set = DEBUGSUPERSENSITIVE;
+                            }
+                            break;
+
+                        case "DEBUGANNOUNCE":
+                            {
+                                set = DEBUGANNOUNCE;
+                            }
+                            break;
+
+                        case "DEBUGNOSND":
+                            {
+                                set = DEBUGNOSND;
+                            }
+                            break;
+
+                        case "DEBUGPLAYER":
+                            {
+                                set = DEBUG_PLAYER;
+                            }
+                            break;
+
+                        case "DEBUGALLSKILL":
+                            {
+                                set = DEBUGALLSKILL;
+                            }
+                            break;
+
+                        case "DEBUGNOEVENT":
+                            {
+                                set = DEBUGNOEVENT;
+                            }
+                            break;
+
+                        case "DEBUGNOVOICE":
+                            {
+                                set = DEBUGNOVOICE;
+                            }
+                            break;
+
+                        case "DEBUGRELOADMTR":
+                            {
+                                set = DEBUGRELOADMTR;
+                            }
+                            break;
+
+                        case "DEBUGTIMESTAMP":
+                            {
+                                set = DEBUGTIMESTAMP;
+                            }
+                            break;
+
+                        case "DEBUGALBUMUNLOCK":
+                            {
+                                set = DEBUGALBUMUNLOCK;
+                            }
+                            break;
+
+                        case "DEBUGSTABILIZE_DRAW":
+                            {
+                                set = DEBUGSTABILIZE_DRAW;
+                            }
+                            break;
+
+                        case "DEBUGMIGHTY":
+                            {
+                                set = DEBUGMIGHTY;
+                            }
+                            break;
+
+                        case "DEBUGNODAMAGE":
+                            {
+                                set = DEBUGNODAMAGE;
+                            }
+                            break;
+
+                        case "DEBUGWEAK":
+                            {
+                                set = DEBUGWEAK;
+                            }
+                            break;
+
+                        case "DEBUGBENCHMARK":
+                            {
+                                set = DEBUGBENCHMARK;
+                            }
+                            break;
+
+                        case "DEBUGSUPERCYCLONE":
+                            {
+                                set = DEBUGSUPERCYCLONE;
+                            }
+                            break;
+
+                        case "DEBUGENG_MODE":
+                            {
+                                set = ENG_MODE;
+                            }
+                            break;
+
+                        case "DEBUGSPEFFECT":
+                            {
+                                set = DEBUGSPEFFECT;
+                            }
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                }
+
+                string ret = text.Replace("DEBUG", "DEBUG: ") + ": " + (set ? "ON" : "OFF");
+
+                return ret;
+            }
+
+            public static void updateVar(string text)
+            {
+                try
+                {
+                    switch (text)
+                    {
+                        case "UNCENSOR":
+                            {
+                                UNCENSOR = !UNCENSOR;
+                            }
+                            break;
+
+                        case "DEBUG":
+                            {
+                                X.DEBUG = DEBUG = !DEBUG;
+                            }
+                            break;
+
+                        case "DEBUGNOCFG":
+                            {
+                                X.DEBUGNOCFG = DEBUGNOCFG = !DEBUGNOCFG;
+                            }
+                            break;
+
+                        case "DEBUGSUPERSENSITIVE":
+                            {
+                                X.DEBUGSUPERSENSITIVE = DEBUGSUPERSENSITIVE = !DEBUGSUPERSENSITIVE;
+                            }
+                            break;
+
+                        case "DEBUGANNOUNCE":
+                            {
+                                X.DEBUGANNOUNCE = DEBUGANNOUNCE = !DEBUGANNOUNCE;
+                            }
+                            break;
+
+                        case "DEBUGNOSND":
+                            {
+                                X.DEBUGNOSND = DEBUGNOSND = !DEBUGNOSND;
+                            }
+                            break;
+
+                        case "DEBUGPLAYER":
+                            {
+                                X.DEBUG_PLAYER = DEBUG_PLAYER = !DEBUG_PLAYER;
+                            }
+                            break;
+
+                        case "DEBUGALLSKILL":
+                            {
+                                X.DEBUGALLSKILL = DEBUGALLSKILL = !DEBUGALLSKILL;
+                            }
+                            break;
+
+                        case "DEBUGNOEVENT":
+                            {
+                                X.DEBUGNOEVENT = DEBUGNOEVENT = !DEBUGNOEVENT;
+                            }
+                            break;
+
+                        case "DEBUGNOVOICE":
+                            {
+                                X.DEBUGNOVOICE = DEBUGNOVOICE = !DEBUGNOVOICE;
+                            }
+                            break;
+
+                        case "DEBUGRELOADMTR":
+                            {
+                                X.DEBUGRELOADMTR = DEBUGRELOADMTR = !DEBUGRELOADMTR;
+                            }
+                            break;
+
+                        case "DEBUGTIMESTAMP":
+                            {
+                                X.DEBUGTIMESTAMP = DEBUGTIMESTAMP = !DEBUGTIMESTAMP;
+                            }
+                            break;
+
+                        case "DEBUGALBUMUNLOCK":
+                            {
+                                X.DEBUGALBUMUNLOCK = DEBUGALBUMUNLOCK = !DEBUGALBUMUNLOCK;
+                            }
+                            break;
+
+                        case "DEBUGSTABILIZE_DRAW":
+                            {
+                                X.DEBUGSTABILIZE_DRAW = DEBUGSTABILIZE_DRAW = !DEBUGSTABILIZE_DRAW;
+                            }
+                            break;
+
+                        case "DEBUGMIGHTY":
+                            {
+                                X.DEBUGMIGHTY = DEBUGMIGHTY = !DEBUGMIGHTY;
+                            }
+                            break;
+
+                        case "DEBUGNODAMAGE":
+                            {
+                                X.DEBUGNODAMAGE = DEBUGNODAMAGE = !DEBUGNODAMAGE;
+                            }
+                            break;
+
+                        case "DEBUGWEAK":
+                            {
+                                X.DEBUGWEAK = DEBUGWEAK = !DEBUGWEAK;
+                            }
+                            break;
+
+                        case "DEBUGBENCHMARK":
+                            {
+                                X.DEBUGBENCHMARK = DEBUGBENCHMARK = !DEBUGBENCHMARK;
+                            }
+                            break;
+
+                        case "DEBUGSUPERCYCLONE":
+                            {
+                                X.DEBUGSUPERCYCLONE = DEBUGSUPERCYCLONE = !DEBUGSUPERCYCLONE;
+                            }
+                            break;
+
+                        case "DEBUGENG_MODE":
+                            {
+                                X.ENG_MODE = ENG_MODE = !ENG_MODE;
+                            }
+                            break;
+
+                        case "DEBUGSPEFFECT":
+                            {
+                                X.DEBUGSPEFFECT = DEBUGSPEFFECT = !DEBUGSPEFFECT;
+                            }
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
                 }
             }
         }
@@ -922,9 +1183,70 @@ namespace AliceInGradleDemosaicMod
             public static bool NoPervertDisableWormTrap = false;
             public static bool NoPervertDisableHpAndAbsorbDamage = false;
 
+            public static void initSuperNoelVars()
+            {
+                Invincible = updateVarFirst("SuperNoel", "Invincible");
+                DamageMultiplier = updateVarFirst("SuperNoel", "DamageMultiplier");
+                InfinteBomb = updateVarFirst("SuperNoel", "InfiniteBomb");
+                InfiniteJump = updateVarFirst("SuperNoel", "InfiniteJump");
+                DurableShield = updateVarFirst("SuperNoel", "DurableShield");
+                DisableGasDamage = updateVarFirst("SuperNoel", "DisableGasDamage");
+                ImmuneToMapThorn = updateVarFirst("SuperNoel", "ImmuneToMapThorn");
+                ImmuneToLava = updateVarFirst("SuperNoel", "ImmuneToLava");
+
+                ImmuneToSleep = updateVarFirst("SuperNoel", "ImmuneToSleep");
+                ImmuneToConfuse = updateVarFirst("SuperNoel", "ImmuneToConfuse");
+                ImmuneToParalysis = updateVarFirst("SuperNoel", "ImmuneToParalysis");
+                ImmuneToBurn = updateVarFirst("SuperNoel", "ImmuneToBurn");
+                ImmuneToFrozen = updateVarFirst("SuperNoel", "ImmuneToFrozen");
+                ImmuneToJamming = updateVarFirst("SuperNoel", "ImmuneToJamming");
+
+                NoPervertDisableGrabAttack = updateVarFirst("SuperNoel", "NoPervertDisableGrabAttack");
+                NoPervertDisableEpDamage = updateVarFirst("SuperNoel", "NoPervertDisableEpDamage");
+                NoPervertSkipGameOverPlay = updateVarFirst("SuperNoel", "NoPervertSkipGameOverPlay");
+                NoPervertDisableWormTrap = updateVarFirst("SuperNoel", "NoPervertDisableWormTrap");
+                NoPervertDisableHpAndAbsorbDamage = updateVarFirst("SuperNoel", "NoPervertDisableHpAndAbsorbDamage");
+
+                hp_dmg_def = updateVarFirstFloat("SuperNoel", "hp_dmg_def", 0);
+                mp_dmg_def = updateVarFirstFloat("SuperNoel", "mp_dmg_def", 0);
+            }
+
+            public static void updateSuperNoelVars()
+            {
+                if (!saveSettingsInConfig.Value)
+                {
+                    return;
+                }
+
+                updateVarSecond("SuperNoel", "Invincible", Invincible);
+                updateVarSecond("SuperNoel", "DamageMultiplier", DamageMultiplier);
+                updateVarSecond("SuperNoel", "InfiniteBomb", InfinteBomb);
+                updateVarSecond("SuperNoel", "InfiniteJump", InfiniteJump);
+                updateVarSecond("SuperNoel", "DurableShield", DurableShield);
+                updateVarSecond("SuperNoel", "DisableGasDamage", DisableGasDamage);
+                updateVarSecond("SuperNoel", "ImmuneToMapThorn", ImmuneToMapThorn);
+                updateVarSecond("SuperNoel", "ImmuneToLava", ImmuneToLava);
+
+                updateVarSecond("SuperNoel", "ImmuneToSleep", ImmuneToSleep);
+                updateVarSecond("SuperNoel", "ImmuneToConfuse", ImmuneToConfuse);
+                updateVarSecond("SuperNoel", "ImmuneToParalysis", ImmuneToParalysis);
+                updateVarSecond("SuperNoel", "ImmuneToBurn", ImmuneToBurn);
+                updateVarSecond("SuperNoel", "ImmuneToFrozen", ImmuneToFrozen);
+                updateVarSecond("SuperNoel", "ImmuneToJamming", ImmuneToJamming);
+
+                updateVarSecond("SuperNoel", "NoPervertDisableGrabAttack", NoPervertDisableGrabAttack);
+                updateVarSecond("SuperNoel", "NoPervertDisableEpDamage", NoPervertDisableEpDamage);
+                updateVarSecond("SuperNoel", "NoPervertSkipGameOverPlay", NoPervertSkipGameOverPlay);
+                updateVarSecond("SuperNoel", "NoPervertDisableWormTrap", NoPervertDisableWormTrap);
+                updateVarSecond("SuperNoel", "NoPervertDisableHpAndAbsorbDamage", NoPervertDisableHpAndAbsorbDamage);
+
+                updateVarSecondFloat("SuperNoel", "hp_dmg_def", hp_dmg_def);
+                updateVarSecondFloat("SuperNoel", "mp_dmg_def", mp_dmg_def);
+            }
+
             public static string currentItemName = string.Empty;
             public static int currentItemGrade = -1;
-            public static int currentItemAmount = 0;
+            public static int currentItemAmount = 1;
 
             public static bool addItemCmd = false;
 
@@ -1081,6 +1403,15 @@ namespace AliceInGradleDemosaicMod
                 try
                 {
                     PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(UiItemManageBox), "fnClickItemCmd", "SuperNoelAddItem", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(UiItemManageBox), "fnClickItemRow", "SuperNoelAddItem2", true, false);
                 }
                 catch (Exception ex)
                 {
@@ -1331,7 +1662,7 @@ namespace AliceInGradleDemosaicMod
                     return true;
                 }
             }
-            private static bool SuperNoelImmuneToOther(ref SER ser, int __maxt, int max_level, bool add_to_pre_bits, ref M2SerItem __result)
+            private static bool SuperNoelImmuneToOther(ref M2SerItem __result, SER ser, [HarmonyArgument("__maxt")] int maxt, int max_level, bool add_to_pre_bits)
             {
                 bool cure_flag = false;
                 if (ser == SER.SLEEP && ImmuneToSleep)
@@ -1369,10 +1700,112 @@ namespace AliceInGradleDemosaicMod
                 }
             }
 
+            public static List<string> NameToKeyList = new List<string>();
             private static Dictionary<string, string> NameToKey = new Dictionary<string, string>();
-
-            private static bool SuperNoelAddItem(ref aBtn B, ref UiItemManageBox __instance)
+            private static Dictionary<string, string> NameToKeyLower = new Dictionary<string, string>();
+            private static bool NameToKeyInit = false;
+            public static void initNameToKey()
             {
+                if (NameToKeyList.Count == 0)
+                {
+                    NameToKeyInit = false;
+                }
+                if (NameToKeyInit)
+                {
+                    return;
+                }
+                NameToKeyInit = true;
+                NameToKey.Clear();
+                foreach (string key in NelItem.OData.Keys)
+                {
+                    NameToKeyList.Add(key);
+                    if (!NameToKey.ContainsKey(key))
+                    {
+                        NameToKey.Add(key, key);
+                    }
+
+                    string keyLower = key.ToLower();
+                    if (!NameToKeyLower.ContainsKey(keyLower)) {
+                        NameToKeyLower.Add(keyLower, key);
+                    }
+                }
+            }
+
+            public static NelItemManager IMNG = null;
+            private static UiItemManageBox uiItemManageBox = null;
+
+            public static void AddItem(string item_name, int count)
+            {
+                initNameToKey();
+
+                if (IMNG == null)
+                {
+                    return;
+                }
+
+                if (uiItemManageBox == null)
+                {
+                    return;
+                }
+
+                NelItem Itm = null;
+                
+                if (NelItem.OData.ContainsKey(item_name))
+                {
+                    Itm = NelItem.OData[item_name];
+                }
+                else if (NameToKey != null && NameToKey.ContainsKey(item_name) &&
+                    NelItem.OData.ContainsKey(NameToKey[item_name]))
+                {
+                    Itm = NelItem.OData[NameToKey[item_name]];
+                } else
+                {
+                    return;
+                }
+
+                int grade;
+                int new_grade = 5;
+                bool retain_grade_flag;
+                
+                if (currentItemGrade != -1)
+                {
+                    new_grade = currentItemGrade;
+                    retain_grade_flag = false;
+                }
+                else
+                {
+                    retain_grade_flag = true;
+                }
+
+                grade = Itm.individual_grade ? 0 : retain_grade_flag ? uiItemManageBox.get_grade_cursor() : new_grade - 1;
+                
+                if (count > 0)
+                {
+                    NelItemManager.NelItemDrop nelItemDrop = IMNG.dropManual(Itm, count, grade,
+                       uiItemManageBox.Pr.x, uiItemManageBox.Pr.y, X.NIXP(-0.003f, -0.07f) * (float)CAim._XD(uiItemManageBox.Pr.aim, 1),
+                        X.NIXP(-0.01f, -0.04f), null, false);
+                    nelItemDrop.discarded = true;
+                }
+            }
+            private static bool SuperNoelAddItem2(aBtn B, UiItemManageBox __instance)
+            {
+                if (IMNG == null)
+                    IMNG = __instance.IMNG;
+                if (uiItemManageBox == null)
+                    uiItemManageBox = __instance;
+                initNameToKey();
+
+                return true;
+            }
+
+            private static bool SuperNoelAddItem(aBtn B, ref UiItemManageBox __instance)
+            {
+                if  (IMNG == null)
+                    IMNG = __instance.IMNG;
+                if (uiItemManageBox == null)
+                    uiItemManageBox = __instance;
+                initNameToKey();
+
                 if (!addItemCmd)
                 {
                     return true;
@@ -1432,6 +1865,37 @@ namespace AliceInGradleDemosaicMod
             public static bool PervertEroBow = false;
 
             public static float EPDamageMultiplier = 0;
+
+            public static void initNoelPervertVars()
+            {
+                PervertEpItemEffect = updateVarFirst("NoelPervert", "PervertEpItemEffect");
+                PervertEPDamageMultiplier = updateVarFirst("NoelPervert", "PervertEPDamageMultiplier");
+                PervertEnableMultipleOrgasmForAll = updateVarFirst("NoelPervert", "PervertEnableMultipleOrgasmForAll");
+                PervertEasierOrgasmWithHighEP = updateVarFirst("NoelPervert", "PervertEasierOrgasmWithHighEP");
+                PervertSadismMode = updateVarFirst("NoelPervert", "PervertSadismMode");
+                PervertMasochismMode = updateVarFirst("NoelPervert", "PervertMasochismMode");
+                PervertEroBow = updateVarFirst("NoelPervert", "PervertEroBow");
+
+                EPDamageMultiplier = updateVarFirstFloat("NoelPervert", "EPDamageMultiplier");
+            }
+
+            public static void updateNoelPervertVars()
+            {
+                if (!saveSettingsInConfig.Value)
+                {
+                    return;
+                }
+
+                updateVarSecond("NoelPervert", "PervertEpItemEffect", PervertEpItemEffect);
+                updateVarSecond("NoelPervert", "PervertEPDamageMultiplier", PervertEPDamageMultiplier);
+                updateVarSecond("NoelPervert", "PervertEnableMultipleOrgasmForAll", PervertEnableMultipleOrgasmForAll);
+                updateVarSecond("NoelPervert", "PervertEasierOrgasmWithHighEP", PervertEasierOrgasmWithHighEP);
+                updateVarSecond("NoelPervert", "PervertSadismMode", PervertSadismMode);
+                updateVarSecond("NoelPervert", "PervertMasochismMode", PervertMasochismMode);
+                updateVarSecond("NoelPervert", "PervertEroBow", PervertEroBow);
+
+                updateVarSecondFloat("NoelPervert", "EPDamageMultiplier", EPDamageMultiplier);
+            }
             public static void ExecuteHarmonyPatches()
             {
                 try
@@ -1591,7 +2055,7 @@ namespace AliceInGradleDemosaicMod
                     return true;
                 }
             }
-            private static bool NoelPervertSadismMode(ref NelAttackInfo Atk, ref HITTYPE add_hittype, bool force)
+            private static bool NoelPervertSadismMode(NelAttackInfo Atk, ref HITTYPE add_hittype, bool force)
             {
                 PRNoel noel = SetGameValues.getNoel();
 
@@ -1609,7 +2073,7 @@ namespace AliceInGradleDemosaicMod
                 return true;
             }
 
-            private static bool NoelPervertMasochismMode(ref NelAttackInfoBase Atk, out bool force, int val, bool show_damage_counter)
+            private static bool NoelPervertMasochismMode(NelAttackInfoBase Atk, out bool force, int val, bool show_damage_counter)
             {
                 force = val > 0;
                 //if (Atk == null || Atk.AttackFrom is PR)
@@ -1744,6 +2208,21 @@ namespace AliceInGradleDemosaicMod
         public static class DebugMe
         {
             public static bool DebugThis = false;
+
+            public static void initDebugMeVars()
+            {
+                updateVarFirst("DebugMe", "DebugThis");
+            }
+
+            public static void updateDebugMeVars()
+            {
+                if (!saveSettingsInConfig.Value)
+                {
+                    return;
+                }
+
+                updateVarSecond("DebugMe", "DebugThis", DebugThis);
+            }
 
             public static void ExecuteHarmonyPatches()
             {
@@ -2102,6 +2581,7 @@ namespace AliceInGradleDemosaicMod
         bool foldoutChangeOutfit = false;
         bool foldoutUnlockables = false;
         bool foldoutAddItem = false;
+        bool foldoutAddItemList = false;
         string weatherText = "0110111";
         int money = 0;
         int level = 0;
@@ -2111,6 +2591,22 @@ namespace AliceInGradleDemosaicMod
         private void DrawCheatWindow(int windowID)
         {
             scrollPos = GUILayout.BeginScrollView(scrollPos);
+
+            GUILayout.Label($"KeyCode to open / close the cheat menu: {keyCodeToOpenCloseTheCheatsMenu}");
+
+            GUILayout.Label("To change the key code, please look in");
+
+            GUILayout.Label("BepInEx/config/com.wolfitdm.AliceInGradleDemosaicMod.cfg");
+
+            toggleButton("Save Settings In Config", saveSettingsInConfig.Value, () =>
+            {
+                saveSettingsInConfig.Value = !saveSettingsInConfig.Value;
+            });
+
+            toggleButton("Is Menu Default Opened", configMenuDefaultOpen.Value, () =>
+            {
+                configMenuDefaultOpen.Value = !configMenuDefaultOpen.Value;
+            });
 
             // Spieler-Cheats
             foldoutPlayer = EditorLikeFoldout(foldoutPlayer, "Uncensor + Debug + Money Cheat");
@@ -2122,13 +2618,22 @@ namespace AliceInGradleDemosaicMod
                                  "DEBUGMIGHTY", "DEBUGNODAMAGE", "DEBUGWEAK", "DEBUGBENCHMARK", "DEBUGSUPERCYCLONE", "DEBUGENG_MODE", "DEBUGSPEFFECT"
                                 ];
 
+                toggleButton("UNCENSOR RESTROOM", Debug.UNCENSOR_RESTROOM, () =>
+                {
+                    Debug.UNCENSOR_RESTROOM = !Debug.UNCENSOR_RESTROOM;
+
+                    SetGameValues.uncensorRestRoomPee(Debug.UNCENSOR_RESTROOM);
+                });
+
                 foreach (string var in vars)
                 {
-                    if (GUILayout.Button(st(var)))
+                    if (GUILayout.Button(Debug.st(var)))
                     {
-                        updateVar(var);
+                        Debug.updateVar(var);
                     }
                 }
+
+                Debug.updateDebugVars();
 
                 if (GUILayout.Button("+1000 Money"))
                 {
@@ -2246,6 +2751,27 @@ namespace AliceInGradleDemosaicMod
                 {
                     SuperNoel.NoPervertDisableHpAndAbsorbDamage = !SuperNoel.NoPervertDisableHpAndAbsorbDamage;
                 });
+
+                SuperNoel.updateSuperNoelVars();
+            }
+
+            foldoutAddItemList = EditorLikeFoldout(foldoutAddItemList, "Super Noel Add Item List");
+
+            if (foldoutAddItemList)
+            {
+                SuperNoel.currentItemAmount = (int)slider("Item Amount", (float)SuperNoel.currentItemAmount, 1, 1000);
+                SuperNoel.currentItemGrade = (int)slider("Item Grade", (float)SuperNoel.currentItemGrade, -1, 100);
+                SuperNoel.initNameToKey();
+                foreach (string item in SuperNoel.NameToKeyList)
+                {
+                    actionButton($"Add Item {item} / {SuperNoel.currentItemAmount} / {SuperNoel.currentItemGrade}", () =>
+                    {
+                        SuperNoel.currentItemName = item;
+                        SuperNoel.addItemCmd = false;
+
+                        SuperNoel.AddItem(SuperNoel.currentItemName, SuperNoel.currentItemAmount);
+                    });
+                }
             }
 
             foldoutAddItem = EditorLikeFoldout(foldoutAddItem, "Super Noel Add Item");
@@ -2253,12 +2779,14 @@ namespace AliceInGradleDemosaicMod
             if (foldoutAddItem)
             {
                 SuperNoel.currentItemName = GUILayout.TextField(SuperNoel.currentItemName, 100, GUILayout.Width(100));
-                SuperNoel.currentItemAmount = (int)slider("Item Amount", (float)SuperNoel.currentItemAmount, 0, 1000);
+                SuperNoel.currentItemAmount = (int)slider("Item Amount", (float)SuperNoel.currentItemAmount, 1, 1000);
                 SuperNoel.currentItemGrade = (int)slider("Item Grade", (float)SuperNoel.currentItemGrade, -1, 100);
 
-                actionButton($"Add Item {SuperNoel.currentItemName} {SuperNoel.currentItemAmount} {SuperNoel.currentItemGrade}", () =>
+                actionButton($"Add Item {SuperNoel.currentItemName} / {SuperNoel.currentItemAmount} / {SuperNoel.currentItemGrade}", () =>
                 {
-                    SuperNoel.addItemCmd = true;
+                    SuperNoel.addItemCmd = false;
+
+                    SuperNoel.AddItem(SuperNoel.currentItemName, SuperNoel.currentItemAmount);
                 });
             }
 
@@ -2295,6 +2823,8 @@ namespace AliceInGradleDemosaicMod
                 {
                     NoelPervert.EPDamageMultiplier = slider("EPDamageMultiplier", NoelPervert.EPDamageMultiplier, 0, 1000000);
                 }
+
+                NoelPervert.updateNoelPervertVars();
 
                 toggleButton("Always Full Break Clothes", DebugMe.DebugThis, () =>
                 {
@@ -2653,7 +3183,7 @@ namespace AliceInGradleDemosaicMod
 
         public static bool drawToMeshEx(object __instance)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2668,7 +3198,7 @@ namespace AliceInGradleDemosaicMod
 
         public static bool drawToMesh(object __instance, Camera Cam)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2682,7 +3212,7 @@ namespace AliceInGradleDemosaicMod
         }
         public static bool FnDrawMosaic(object __instance, object XCon, ProjectionContainer JCon, Camera Cam, ref bool __result)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2697,7 +3227,7 @@ namespace AliceInGradleDemosaicMod
         }
         public static bool setTarget(object __instance, IMosaicDescriptor _Targ, bool force)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2713,7 +3243,7 @@ namespace AliceInGradleDemosaicMod
 
         public static bool countMosaic(object __instance, ref int __result, bool only_on_sensitive)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2729,7 +3259,7 @@ namespace AliceInGradleDemosaicMod
         }
         public static bool countMosaic2(object __instance, ref int __result, bool only_sensitive)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2749,7 +3279,7 @@ namespace AliceInGradleDemosaicMod
                ref MeshAttachment OutMesh,
                ref Spine.Slot BelongSlot, ref bool __result, object __instance)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
@@ -2771,7 +3301,7 @@ namespace AliceInGradleDemosaicMod
             ref Spine.Slot BelongSlot,
             SpineViewer TargetSpv, ref bool __result, object __instance)
         {
-            if (!UNCENSOR)
+            if (!Debug.UNCENSOR)
             {
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
