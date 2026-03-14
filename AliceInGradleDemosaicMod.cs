@@ -884,21 +884,39 @@ namespace AliceInGradleDemosaicMod
             {
                 uncensorSpineAnimFile("damage_fdown.dat", uncensor);
             }
+
+            public static void uncensorDamageFdownAttackVersion2(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("damage_fdown.dat", uncensor, "damage_fdown_ver2.dat");
+            }
+
+            public static void uncensorStandNormal(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_normal.dat", uncensor);
+            }
             public static void uncensorEvImgFile(string file, bool uncensor = true)
             {
                 string path1 = "/EvImg";
                 string path2 = $"{file}";
                 string path3 = $"/EvImg/{file}";
-                uncensorFile(path1, path2, path3, uncensor);
+                string path4 = path2;
+                uncensorFile(path1, path2, path3, path4, uncensor);
             }
-            public static void uncensorSpineAnimFile(string file, bool uncensor = true)
+            public static void uncensorSpineAnimFile(string file, bool uncensor = true, string path4file = "")
             {
                 string path1 = "/SpineAnim";
                 string path2 = $"{file}";
                 string path3 = $"/SpineAnim/{file}";
-                uncensorFile(path1, path2, path3, uncensor);
+                string path4 = path2;
+
+                if (path4file != "")
+                {
+                    path4 = path4file;
+                }
+
+                uncensorFile(path1, path2, path3, path4, uncensor);
             }
-            public static void uncensorFile(string path1, string path2, string path3, bool uncensor = true)
+            public static void uncensorFile(string path1, string path2, string path3, string path4, bool uncensor = true)
             {
                 Directory.CreateDirectory("BepInEx/textures/original");
                 Directory.CreateDirectory("BepInEx/textures/mod");
@@ -910,13 +928,13 @@ namespace AliceInGradleDemosaicMod
                 }
 
                 string targetDir = uncensor ? "mod" : "original";
-                if (File.Exists($"BepInEx/textures/{targetDir}/{path2}"))
+                if (File.Exists($"BepInEx/textures/{targetDir}/{path4}"))
                 {
                     if (File.Exists($"AliceInCradle_Data/StreamingAssets{path3}"))
                     {
                         File.Delete($"AliceInCradle_Data/StreamingAssets{path3}");
                     }
-                    File.Copy($"BepInEx/textures/{targetDir}/{path2}", $"AliceInCradle_Data/StreamingAssets{path3}");
+                    File.Copy($"BepInEx/textures/{targetDir}/{path4}", $"AliceInCradle_Data/StreamingAssets{path3}");
                 }
 
                 GUILayout.Label("Please restart Alice In Gradle, in order to see a effect!");
@@ -957,6 +975,10 @@ namespace AliceInGradleDemosaicMod
             public static bool UNCENSOR_EGG_REMOVE_ATTACK = true;
 
             public static bool UNCENSOR_DAMAGE_FDOWN_VERSION1 = true;
+
+            public static bool UNCENSOR_DAMAGE_FDOWN_VERSION2 = true;
+
+            public static bool UNCENSOR_STAND_NORMAL = true;
 
             public static bool DEBUG = true;
 
@@ -1009,6 +1031,10 @@ namespace AliceInGradleDemosaicMod
                 UNCENSOR_EGG_REMOVE_ATTACK = updateVarFirstForce("Debug", "UNCENSOR_EGG_REMOVE_ATTACK");
 
                 UNCENSOR_DAMAGE_FDOWN_VERSION1 = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION1");
+
+                UNCENSOR_DAMAGE_FDOWN_VERSION2 = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION2");
+
+                UNCENSOR_STAND_NORMAL = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL");
 
                 DEBUG = updateVarFirst("Debug", "DEBUG", true);
 
@@ -1065,6 +1091,10 @@ namespace AliceInGradleDemosaicMod
                 updateVarSecondForce("Debug", "UNCENSOR_EGG_REMOVE_ATTACK", UNCENSOR_EGG_REMOVE_ATTACK);
  
                 updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION1", UNCENSOR_DAMAGE_FDOWN_VERSION1);
+
+                updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION2", UNCENSOR_DAMAGE_FDOWN_VERSION2);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL", UNCENSOR_STAND_NORMAL);
 
                 updateVarSecond("Debug", "DEBUG", DEBUG);
 
@@ -2882,6 +2912,20 @@ namespace AliceInGradleDemosaicMod
                     Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1 = !Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1;
 
                     SetGameValues.uncensorDamageFdownAttackVersion1(Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1);
+                });
+
+                toggleButton("UNCENSOR DAMAGE FDOWN ATTACK VERSION 2", Debug.UNCENSOR_DAMAGE_FDOWN_VERSION2, () =>
+                {
+                    Debug.UNCENSOR_DAMAGE_FDOWN_VERSION2 = !Debug.UNCENSOR_DAMAGE_FDOWN_VERSION2;
+
+                    SetGameValues.uncensorDamageFdownAttackVersion2(Debug.UNCENSOR_DAMAGE_FDOWN_VERSION2);
+                });
+
+                toggleButton("UNCENSOR STAND NORMAL (MINIROCK VERSION)", Debug.UNCENSOR_STAND_NORMAL, () =>
+                {
+                    Debug.UNCENSOR_STAND_NORMAL = !Debug.UNCENSOR_STAND_NORMAL;
+
+                    SetGameValues.uncensorStandNormal(Debug.UNCENSOR_STAND_NORMAL);
                 });
 
                 foreach (string var in vars)
