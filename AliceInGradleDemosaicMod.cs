@@ -15,6 +15,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Web;
 using UnityEngine;
@@ -97,6 +98,42 @@ namespace AliceInGradleDemosaicMod
             {
                 setC.Value = configEntriesFirstSet[var];
             }
+
+            return;
+        }
+        private static bool updateVarFirstForce(string section, string var, bool defaultValue = false)
+        {
+            ConfigEntry<bool> setC = getConfigEntry(section, var, defaultValue);
+
+            if (setC == null)
+            {
+                return false;
+            }
+
+            if (!configEntriesFirstSet.ContainsKey(var))
+            {
+
+                configEntriesFirstSet.Add(var, setC.Value);
+            }
+
+            bool set = defaultValue;
+
+            set = setC.Value = configEntriesFirstSet[var];
+
+            return set;
+        }
+
+        private static void updateVarSecondForce(string section, string var, bool set)
+        {
+            ConfigEntry<bool> setC = getConfigEntry(section, var);
+
+            if (setC == null)
+            {
+                return;
+            }
+
+            configEntriesFirstSet[var] = set;
+            setC.Value = configEntriesFirstSet[var];
 
             return;
         }
@@ -252,6 +289,7 @@ namespace AliceInGradleDemosaicMod
 
             keyCodeToOpenCloseTheCheatsMenu = configKeyCodeToOpenCheatMenu.Value;
 
+            SetGameValues.initSetGameValuesVars();
             Debug.initDebugVars();
             SuperNoel.initSuperNoelVars();
             NoelPervert.initNoelPervertVars();
@@ -328,6 +366,18 @@ namespace AliceInGradleDemosaicMod
             private static NelM2DBase m2d;
             private static PRNoel noel;
             private static bool isInit = false;
+
+            public static bool USE_UNSAFE_FUNCS = true;
+
+            public static void initSetGameValuesVars()
+            {
+                USE_UNSAFE_FUNCS = updateVarFirstForce("SetGameValues", "USE_UNSAFE_FUNCS", true);
+            }
+
+            public static void updateSetGameValuesVars()
+            {
+                updateVarSecondForce("SetGameValues", "USE_UNSAFE_FUNCS", USE_UNSAFE_FUNCS);
+            }
             public static void init()
             {
                 if (isInit)
@@ -352,8 +402,115 @@ namespace AliceInGradleDemosaicMod
                 return m2d;
             }
 
+            private static bool use_unsafe_func()
+            {
+                if (USE_UNSAFE_FUNCS)
+                {
+                    return true;
+                }
+
+                GUILayout.Label("You can not use unsafe func!");
+                return false;
+            }
+
+            private static Texture2D MakeReadable(Texture2D source)
+            {
+                if (source == null)
+                {
+                    Logger.LogError("Source texture is null.");
+                    return null;
+                }
+
+                // Create a temporary RenderTexture
+                RenderTexture rt = RenderTexture.GetTemporary(
+                    source.width,
+                    source.height,
+                    0,
+                    RenderTextureFormat.Default,
+                    RenderTextureReadWrite.Linear);
+
+                try
+                {
+                    // Copy source texture to RenderTexture
+                    UnityEngine.Graphics.Blit(source, rt);
+
+                    // Backup the currently active RenderTexture
+                    //RenderTexture previous = RenderTexture.active;
+                    //RenderTexture.active = rt;
+
+                    // Create a new readable Texture2D
+                    Texture2D readableTex = new Texture2D(source.width, source.height, TextureFormat.RGBA32, false);
+                    readableTex.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+                    readableTex.Apply();
+
+                    // Restore the active RenderTexture
+                    //RenderTexture.active = previous;
+
+                    return readableTex;
+                }
+                finally
+                {
+                    try
+                    {
+                        // Release the temporary RenderTexture
+                        RenderTexture.ReleaseTemporary(rt);
+                    }
+                    catch { }
+                }
+            }
+            public static void FindAndLogTextures()
+            {
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
+
+                try
+                {
+                    // Find all loaded textures, including inactive and hidden ones
+                    var textures = Resources.FindObjectsOfTypeAll<Texture2D>();
+
+                    Logger.LogInfo($"Found {textures.Length} textures.");
+
+                    foreach (var tex in textures.OrderBy(t => t.name))
+                    {
+                        if (tex != null)
+                        {
+                            Logger.LogInfo($"Texture: {tex.name} | Size: {tex.width}x{tex.height} | Format: {tex.format}");
+
+                            Texture2D texx = MakeReadable(tex);
+                            byte[] bytes = null;
+
+                            try
+                            {
+                                bytes = texx.EncodeToPNG();
+                            }
+                            catch (Exception e)
+                            {
+                                continue;
+                            }
+
+                            if (bytes == null)
+                            {
+                                continue;
+                            }
+
+                            File.WriteAllBytes(tex.name + ".png", bytes);
+                        }
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    Logger.LogError($"Error while finding textures: {ex}");
+                }
+            }
             public static void tornClothes(int i)
             {
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
+
                 init();
                 if (!isInit)
                 {
@@ -567,6 +724,11 @@ namespace AliceInGradleDemosaicMod
             }
             public static void SetWeather(string wea)
             {
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
+
                 init();
                 if (!isInit)
                 {
@@ -616,6 +778,10 @@ namespace AliceInGradleDemosaicMod
             }
             public static void ResetHExp()
             {
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
                 init();
                 if (!isInit)
                 {
@@ -631,6 +797,10 @@ namespace AliceInGradleDemosaicMod
             }
             public static void resetMpBrk()
             {
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
                 init();
                 if (!isInit)
                 {
@@ -641,6 +811,10 @@ namespace AliceInGradleDemosaicMod
             }
             public static void PlantEggs()
             {
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
                 init();
                 if (!isInit)
                 {
@@ -694,24 +868,58 @@ namespace AliceInGradleDemosaicMod
 
             public static void uncensorRestRoomPee(bool uncensor = true)
             {
+                uncensorEvImgFile("__events_restroom.pxls.bytes.texture_0.dat", uncensor);
+            }
+
+            public static void uncensor2WeekAttack(bool uncensor = true)
+            {
+                uncensorEvImgFile("__events_2weekattack.pxls.bytes.texture_0.dat", uncensor);
+            }
+
+            public static void uncensorEggRemoveAttack(bool uncensor = true)
+            {
+                uncensorEvImgFile("__events_eggremove.pxls.bytes.texture_0.dat", uncensor);
+            }
+            public static void uncensorDamageFdownAttackVersion1(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("damage_fdown.dat", uncensor);
+            }
+            public static void uncensorEvImgFile(string file, bool uncensor = true)
+            {
+                string path1 = "/EvImg";
+                string path2 = $"{file}";
+                string path3 = $"/EvImg/{file}";
+                uncensorFile(path1, path2, path3, uncensor);
+            }
+            public static void uncensorSpineAnimFile(string file, bool uncensor = true)
+            {
+                string path1 = "/SpineAnim";
+                string path2 = $"{file}";
+                string path3 = $"/SpineAnim/{file}";
+                uncensorFile(path1, path2, path3, uncensor);
+            }
+            public static void uncensorFile(string path1, string path2, string path3, bool uncensor = true)
+            {
                 Directory.CreateDirectory("BepInEx/textures/original");
                 Directory.CreateDirectory("BepInEx/textures/mod");
-                Directory.CreateDirectory("AliceInCradle_Data/StreamingAssets/EvImg");
+                Directory.CreateDirectory($"AliceInCradle_Data/StreamingAssets{path1}");
 
-                if (!File.Exists("BepInEx/textures/original/__events_restroom.pxls.bytes.texture_0.dat"))
+                if (!File.Exists($"BepInEx/textures/original/{path2}"))
                 {
-                    File.Copy("AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat", "BepInEx/textures/original/__events_restroom.pxls.bytes.texture_0.dat");
+                    File.Copy($"AliceInCradle_Data/StreamingAssets{path3}", $"BepInEx/textures/original/{path2}");
                 }
 
                 string targetDir = uncensor ? "mod" : "original";
-                if (File.Exists($"BepInEx/textures/{targetDir}/__events_restroom.pxls.bytes.texture_0.dat"))
+                if (File.Exists($"BepInEx/textures/{targetDir}/{path2}"))
                 {
-                    if (File.Exists("AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat"))
+                    if (File.Exists($"AliceInCradle_Data/StreamingAssets{path3}"))
                     {
-                        File.Delete("AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat");
+                        File.Delete($"AliceInCradle_Data/StreamingAssets{path3}");
                     }
-                    File.Copy($"BepInEx/textures/{targetDir}/__events_restroom.pxls.bytes.texture_0.dat", "AliceInCradle_Data/StreamingAssets/EvImg/__events_restroom.pxls.bytes.texture_0.dat");
+                    File.Copy($"BepInEx/textures/{targetDir}/{path2}", $"AliceInCradle_Data/StreamingAssets{path3}");
                 }
+
+                GUILayout.Label("Please restart Alice In Gradle, in order to see a effect!");
             }
         }
 
@@ -743,6 +951,12 @@ namespace AliceInGradleDemosaicMod
             public static bool UNCENSOR = true;
 
             public static bool UNCENSOR_RESTROOM = true;
+
+            public static bool UNCENSOR_2WEEK_ATTACK = true;
+
+            public static bool UNCENSOR_EGG_REMOVE_ATTACK = true;
+
+            public static bool UNCENSOR_DAMAGE_FDOWN_VERSION1 = true;
 
             public static bool DEBUG = true;
 
@@ -788,7 +1002,13 @@ namespace AliceInGradleDemosaicMod
             {
                 UNCENSOR = updateVarFirst("Debug", "UNCENSOR", true);
 
-                UNCENSOR_RESTROOM = updateVarFirst("Debug", "UNCENSOR_RESTROOM");
+                UNCENSOR_RESTROOM = updateVarFirstForce("Debug", "UNCENSOR_RESTROOM");
+
+                UNCENSOR_2WEEK_ATTACK = updateVarFirstForce("Debug", "UNCENSOR_2WEEK_ATTACK");
+
+                UNCENSOR_EGG_REMOVE_ATTACK = updateVarFirstForce("Debug", "UNCENSOR_EGG_REMOVE_ATTACK");
+
+                UNCENSOR_DAMAGE_FDOWN_VERSION1 = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION1");
 
                 DEBUG = updateVarFirst("Debug", "DEBUG", true);
 
@@ -838,7 +1058,13 @@ namespace AliceInGradleDemosaicMod
 
                 updateVarSecond("Debug", "UNCENSOR", UNCENSOR);
 
-                updateVarSecond("Debug", "UNCENSOR_RESTROOM", UNCENSOR_RESTROOM);
+                updateVarSecondForce("Debug", "UNCENSOR_RESTROOM", UNCENSOR_RESTROOM);
+
+                updateVarSecondForce("Debug", "UNCENSOR_2WEEK_ATTACK", UNCENSOR_2WEEK_ATTACK);
+
+                updateVarSecondForce("Debug", "UNCENSOR_EGG_REMOVE_ATTACK", UNCENSOR_EGG_REMOVE_ATTACK);
+ 
+                updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION1", UNCENSOR_DAMAGE_FDOWN_VERSION1);
 
                 updateVarSecond("Debug", "DEBUG", DEBUG);
 
@@ -2608,6 +2834,18 @@ namespace AliceInGradleDemosaicMod
                 configMenuDefaultOpen.Value = !configMenuDefaultOpen.Value;
             });
 
+            toggleButton("Use unsafe functions", SetGameValues.USE_UNSAFE_FUNCS, () =>
+            {
+                SetGameValues.USE_UNSAFE_FUNCS = !SetGameValues.USE_UNSAFE_FUNCS;
+            });
+
+            SetGameValues.updateSetGameValuesVars();
+
+            actionButton("Find and Export all textures", () =>
+            {
+                SetGameValues.FindAndLogTextures();
+            });
+
             // Spieler-Cheats
             foldoutPlayer = EditorLikeFoldout(foldoutPlayer, "Uncensor + Debug + Money Cheat");
 
@@ -2623,6 +2861,27 @@ namespace AliceInGradleDemosaicMod
                     Debug.UNCENSOR_RESTROOM = !Debug.UNCENSOR_RESTROOM;
 
                     SetGameValues.uncensorRestRoomPee(Debug.UNCENSOR_RESTROOM);
+                });
+
+                toggleButton("UNCENSOR 2WEEK ATTACK", Debug.UNCENSOR_2WEEK_ATTACK, () =>
+                {
+                    Debug.UNCENSOR_2WEEK_ATTACK = !Debug.UNCENSOR_2WEEK_ATTACK;
+
+                    SetGameValues.uncensor2WeekAttack(Debug.UNCENSOR_2WEEK_ATTACK);
+                });
+
+                toggleButton("UNCENSOR EGG REMOVE ATTACK", Debug.UNCENSOR_EGG_REMOVE_ATTACK, () =>
+                {
+                    Debug.UNCENSOR_EGG_REMOVE_ATTACK = !Debug.UNCENSOR_EGG_REMOVE_ATTACK;
+
+                    SetGameValues.uncensorEggRemoveAttack(Debug.UNCENSOR_EGG_REMOVE_ATTACK);
+                });
+
+                toggleButton("UNCENSOR DAMAGE FDOWN ATTACK VERSION 1", Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1, () =>
+                {
+                    Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1 = !Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1;
+
+                    SetGameValues.uncensorDamageFdownAttackVersion1(Debug.UNCENSOR_DAMAGE_FDOWN_VERSION1);
                 });
 
                 foreach (string var in vars)
