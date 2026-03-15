@@ -206,7 +206,7 @@ namespace AliceInGradleDemosaicMod
 
         public static KeyCode keyCodeToOpenCloseTheCheatsMenu = 0;
 
-        public static Rect windowRect = new Rect(40, 40, 400, 600);
+        public static Rect windowRect = new Rect(40, 40, 600, 600);
 
         public AliceInGradleDemosaicMod()
         {
@@ -894,6 +894,30 @@ namespace AliceInGradleDemosaicMod
             {
                 uncensorSpineAnimFile("stand_normal.dat", uncensor);
             }
+            public static void uncensorStandNormalVersion2(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_normal.dat", uncensor, "stand_normal_ver2.dat");
+            }
+            public static void uncensorStandNormalVersion3(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_normal.dat", uncensor, "stand_normal_ver3.dat");
+            }
+            public static void uncensorStandWeak(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_weak.dat", uncensor);
+            }
+            public static void uncensorStandWeakVersion2(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_weak.dat", uncensor, "stand_weak_ver2.dat");
+            }
+            public static void uncensorDamageA(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("damage_a", uncensor);
+            }
+            public static void uncensorDamageB(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("damage_b", uncensor);
+            }
             public static void uncensorEvImgFile(string file, bool uncensor = true)
             {
                 string path1 = "/EvImg";
@@ -980,6 +1004,18 @@ namespace AliceInGradleDemosaicMod
 
             public static bool UNCENSOR_STAND_NORMAL = true;
 
+            public static bool UNCENSOR_STAND_NORMAL_VERSION2 = true;
+
+            public static bool UNCENSOR_STAND_NORMAL_VERSION3 = true;
+
+            public static bool UNCENSOR_STAND_WEAK = true;
+
+            public static bool UNCENSOR_STAND_WEAK_VERSION2 = true;
+
+            public static bool UNCENSOR_DAMAGE_A = true;
+
+            public static bool UNCENSOR_DAMAGE_B = true;
+
             public static bool DEBUG = true;
 
             public static bool DEBUGNOCFG = false;
@@ -1035,6 +1071,18 @@ namespace AliceInGradleDemosaicMod
                 UNCENSOR_DAMAGE_FDOWN_VERSION2 = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION2");
 
                 UNCENSOR_STAND_NORMAL = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL");
+
+                UNCENSOR_STAND_NORMAL_VERSION2 = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION2");
+
+                UNCENSOR_STAND_NORMAL_VERSION3 = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION3");
+
+                UNCENSOR_STAND_WEAK = updateVarFirstForce("Debug", "UNCENSOR_STAND_WEAK");
+
+                UNCENSOR_STAND_WEAK_VERSION2 = updateVarFirstForce("Debug", "UNCENSOR_STAND_WEAK_VERSION2");
+
+                UNCENSOR_DAMAGE_A = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_A");
+
+                UNCENSOR_DAMAGE_B = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_B");
 
                 DEBUG = updateVarFirst("Debug", "DEBUG", true);
 
@@ -1095,6 +1143,18 @@ namespace AliceInGradleDemosaicMod
                 updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_FDOWN_VERSION2", UNCENSOR_DAMAGE_FDOWN_VERSION2);
 
                 updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL", UNCENSOR_STAND_NORMAL);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION2", UNCENSOR_STAND_NORMAL_VERSION2);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION3", UNCENSOR_STAND_NORMAL_VERSION3);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_WEAK", UNCENSOR_STAND_WEAK);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_WEAK_VERSION2", UNCENSOR_STAND_WEAK_VERSION2);
+
+                updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_A", UNCENSOR_DAMAGE_A);
+
+                updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_B", UNCENSOR_DAMAGE_B);
 
                 updateVarSecond("Debug", "DEBUG", DEBUG);
 
@@ -2926,6 +2986,48 @@ namespace AliceInGradleDemosaicMod
                     Debug.UNCENSOR_STAND_NORMAL = !Debug.UNCENSOR_STAND_NORMAL;
 
                     SetGameValues.uncensorStandNormal(Debug.UNCENSOR_STAND_NORMAL);
+                });
+
+                toggleButton("UNCENSOR STAND NORMAL VERSION 2 (MINIROCK VERSION NUDE)", Debug.UNCENSOR_STAND_NORMAL_VERSION2, () =>
+                {
+                    Debug.UNCENSOR_STAND_NORMAL_VERSION2 = !Debug.UNCENSOR_STAND_NORMAL_VERSION2;
+
+                    SetGameValues.uncensorStandNormalVersion2(Debug.UNCENSOR_STAND_NORMAL_VERSION2);
+                });
+
+                toggleButton("UNCENSOR STAND NORMAL VERSION 3 (MINIROCK VERSION FULL NUDE)", Debug.UNCENSOR_STAND_NORMAL_VERSION3, () =>
+                {
+                    Debug.UNCENSOR_STAND_NORMAL_VERSION3 = !Debug.UNCENSOR_STAND_NORMAL_VERSION3;
+
+                    SetGameValues.uncensorStandNormalVersion3(Debug.UNCENSOR_STAND_NORMAL_VERSION3);
+                });
+
+                toggleButton("UNCENSOR STAND WEAK (MORE BOOBS)", Debug.UNCENSOR_STAND_WEAK, () =>
+                {
+                    Debug.UNCENSOR_STAND_WEAK = !Debug.UNCENSOR_STAND_WEAK;
+
+                    SetGameValues.uncensorStandWeak(Debug.UNCENSOR_STAND_WEAK);
+                });
+
+                toggleButton("UNCENSOR STAND WEAK VERSION 2 (MORE BOOBS AND VAGINA)", Debug.UNCENSOR_STAND_WEAK_VERSION2, () =>
+                {
+                    Debug.UNCENSOR_STAND_WEAK_VERSION2 = !Debug.UNCENSOR_STAND_WEAK_VERSION2;
+
+                    SetGameValues.uncensorStandWeakVersion2(Debug.UNCENSOR_STAND_WEAK_VERSION2);
+                });
+
+                toggleButton("UNCENSOR DAMAGE A", Debug.UNCENSOR_DAMAGE_A, () =>
+                {
+                    Debug.UNCENSOR_DAMAGE_A = !Debug.UNCENSOR_DAMAGE_A;
+
+                    SetGameValues.uncensorDamageA(Debug.UNCENSOR_DAMAGE_A);
+                });
+
+                toggleButton("UNCENSOR DAMAGE B", Debug.UNCENSOR_DAMAGE_B, () =>
+                {
+                    Debug.UNCENSOR_DAMAGE_B = !Debug.UNCENSOR_DAMAGE_B;
+
+                    SetGameValues.uncensorDamageB(Debug.UNCENSOR_DAMAGE_B);
                 });
 
                 foreach (string var in vars)
