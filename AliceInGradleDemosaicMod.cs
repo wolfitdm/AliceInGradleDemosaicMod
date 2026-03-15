@@ -17,6 +17,7 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Remoting.Messaging;
 using System.Web;
 using UnityEngine;
 using UnityEngine.NVIDIA;
@@ -739,6 +740,24 @@ namespace AliceInGradleDemosaicMod
                 }
                 nc.showNightLevelAdditionUI();
             }
+
+            public static WeatherItem.WEATHER[] getAvailableWeathers()
+            {
+                WeatherItem.WEATHER[] available_weather = (WeatherItem.WEATHER[])Enum.GetValues(typeof(WeatherItem.WEATHER));
+                return available_weather;
+            }
+
+            public static WeatherItem[] getAvailableWeathersEx()
+            {
+                init();
+                if (!isInit)
+                {
+                    return null;
+                }
+                NightController nc = m2d.NightCon;
+                return nc.getWeatherArray();
+            }
+
             public static void SetWeather(string wea)
             {
                 if (!use_unsafe_func())
@@ -751,9 +770,9 @@ namespace AliceInGradleDemosaicMod
                 {
                     return;
                 }
-                NightController nc = m2d.NightCon;
+
                 string weather_string = wea;
-                WeatherItem.WEATHER[] available_weather = (WeatherItem.WEATHER[])Enum.GetValues(typeof(WeatherItem.WEATHER));
+                WeatherItem.WEATHER[] available_weather = getAvailableWeathers();
                 List<WeatherItem.WEATHER> add_weather_list = new();
                 for (int i = 0; i < weather_string.Length && i < available_weather.Length - 1; i++)
                 {
@@ -765,6 +784,18 @@ namespace AliceInGradleDemosaicMod
                         }
                     }
                 }
+                SetWeatherEx(add_weather_list);
+            }
+
+            public static void SetWeatherEx(List<WeatherItem.WEATHER> add_weather_list)
+            {
+                init();
+                if (!isInit)
+                {
+                    return;
+                }
+                NightController nc = m2d.NightCon;
+
                 // destruction of old weathers
                 WeatherItem[] AWeather = Traverse.Create(nc).Field("AWeather").GetValue<WeatherItem[]>();
                 foreach (WeatherItem weather in AWeather)
@@ -2949,6 +2980,7 @@ namespace AliceInGradleDemosaicMod
         bool foldoutOtherSetMoney = false;
         bool foldoutSetDanger = false;
         bool foldoutSetWeather = false;
+        bool foldoutSetWeathers = false;
         bool foldoutOther = false;
         bool foldoutTornClothes = false;
         bool foldoutChangeOutfit = false;
@@ -2960,6 +2992,7 @@ namespace AliceInGradleDemosaicMod
         int level = 0;
         int dangerLevel = 0;
         int grade = 0;
+        List<WeatherItem.WEATHER> current_weather_list = new List<WeatherItem.WEATHER>();
 
         private void DrawCheatWindow(int windowID)
         {
@@ -3354,14 +3387,72 @@ namespace AliceInGradleDemosaicMod
                 });
             }
 
+            foldoutSetWeathers = EditorLikeFoldout(foldoutSetWeathers, "Set Weathers");
+            if (foldoutSetWeathers)
+            {
+                GUILayout.Label("Selected weather list:");
+
+                foreach (WeatherItem.WEATHER currentWeather in current_weather_list)
+                {
+                    GUILayout.Label(currentWeather.ToString());
+                }
+
+                WeatherItem.WEATHER[] weathers = SetGameValues.getAvailableWeathers();
+
+                if (weathers != null)
+                {
+                    foreach (WeatherItem.WEATHER currentWeather in weathers)
+                    {
+                        if (currentWeather == WeatherItem.WEATHER._MAX)
+                        {
+                            continue;
+                        }
+
+                        actionButton($"Add Weather {currentWeather.ToString()}", () =>
+                        {
+                            current_weather_list.Add(currentWeather);
+                        });
+
+                        actionButton($"Remove Weather {currentWeather.ToString()}", () =>
+                        {
+                            current_weather_list.Remove(currentWeather);
+                        });
+                    }
+                }
+
+                actionButton($"Set Weathers (set selected weathers)", () =>
+                {
+                    SetGameValues.SetWeatherEx(current_weather_list);
+                });
+
+                actionButton($"Clear Weather List (clear selected weathers)", () =>
+                {
+                    current_weather_list.Clear();
+                });
+            }
+
             foldoutSetWeather = EditorLikeFoldout(foldoutSetWeather, "Set Weather");
             if (foldoutSetWeather)
             {
-                weatherText = GUILayout.TextField(weatherText, 100, GUILayout.Width(100));
-                actionButton($"Set Weather {weatherText}", () =>
+                WeatherItem.WEATHER[] weathers = SetGameValues.getAvailableWeathers();
+
+                if (weathers != null)
                 {
-                    SetGameValues.SetWeather(weatherText);
-                });
+                    foreach (WeatherItem.WEATHER currentWeather in weathers)
+                    {
+                        if (currentWeather == WeatherItem.WEATHER._MAX)
+                        {
+                            continue;
+                        }
+
+                        actionButton($"Set Weather {currentWeather.ToString()}", () =>
+                        {
+                            List<WeatherItem.WEATHER> current_weather_list = new List<WeatherItem.WEATHER>();
+                            current_weather_list.Add(currentWeather);
+                            SetGameValues.SetWeatherEx(current_weather_list);
+                        });
+                    }
+                }
             }
 
             foldoutOther = EditorLikeFoldout(foldoutOther, "Misc");
