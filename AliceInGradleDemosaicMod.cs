@@ -27,6 +27,15 @@ using static NetworkDebugStart;
 
 namespace AliceInGradleDemosaicMod
 {
+    public enum UNCENSOR_LEVEL
+    {
+        VeryLight,
+        Light,
+        Medium,
+        Heavier,
+        VeryHeavy
+    }
+
     [BepInPlugin("com.wolfitdm.AliceInGradleDemosaicMod", "AliceInGradleDemosaicMod Plugin", "1.0.0.0")]
     public class AliceInGradleDemosaicMod : BaseUnityPlugin
     {
@@ -36,11 +45,13 @@ namespace AliceInGradleDemosaicMod
         private static ConfigEntry<bool> configMenuDefaultOpen;
         private static ConfigEntry<KeyCode> configKeyCodeToOpenCheatMenu;
         private static ConfigEntry<bool> saveSettingsInConfig;
+        private static ConfigEntry<UNCENSOR_LEVEL> configUncensorLevel;
         private static Dictionary<string, ConfigEntry<bool>> configEntries = new Dictionary<string, ConfigEntry<bool>>();
         private static Dictionary<string, bool> configEntriesFirstSet = new Dictionary<string, bool>();
         private static Dictionary<string, ConfigEntry<float>> configEntriesFloat = new Dictionary<string, ConfigEntry<float>>();
         private static Dictionary<string, float> configEntriesFirstSetFloat = new Dictionary<string, float>();
         private static AliceInGradleDemosaicMod Instance = null;
+        public static UNCENSOR_LEVEL uncensorLevel = UNCENSOR_LEVEL.VeryLight;
 
         private static ConfigEntry<bool> getConfigEntry(string section, string var, bool defaultValue = false)
         {
@@ -282,10 +293,16 @@ namespace AliceInGradleDemosaicMod
                                              KeyCode.R,
                                             "KeyCode to open/close the cheats menu, default R");
 
+            configUncensorLevel = Config.Bind(pluginKey,
+                                             "UNCENSOR_LEVEL",
+                                              UNCENSOR_LEVEL.VeryLight,
+                                             "UNCENSOR_LEVEL, default VeryLight");
+
             Instance = this;
 
             enableMe = configEnableMe.Value;
             showMenu = configMenuDefaultOpen.Value;
+            uncensorLevel = configUncensorLevel.Value;
 
             keyCodeToOpenCloseTheCheatsMenu = configKeyCodeToOpenCheatMenu.Value;
 
@@ -2889,6 +2906,46 @@ namespace AliceInGradleDemosaicMod
             }
         }
 
+        public static void uncensorLevelButton()
+        {
+            if (uncensorLevel == UNCENSOR_LEVEL.VeryLight)
+            {
+                if (GUILayout.Button("CURRENT UNSENCOR_LEVEL: VERY LIGHT"))
+                {
+                    uncensorLevel = UNCENSOR_LEVEL.Light;
+                }
+            }
+            else if (uncensorLevel == UNCENSOR_LEVEL.Light)
+            {
+                if (GUILayout.Button("CURRENT UNSENCOR_LEVEL: LIGHT"))
+                {
+                    uncensorLevel = UNCENSOR_LEVEL.Medium;
+                }
+            }
+            else if (uncensorLevel == UNCENSOR_LEVEL.Medium)
+            {
+                if (GUILayout.Button("CURRENT UNSENCOR_LEVEL: MEDIUM"))
+                {
+                    uncensorLevel = UNCENSOR_LEVEL.Heavier;
+                }
+            }
+            else if (uncensorLevel == UNCENSOR_LEVEL.Heavier)
+            {
+                if (GUILayout.Button("CURRENT UNSENCOR_LEVEL: HEAVIER"))
+                {
+                    uncensorLevel = UNCENSOR_LEVEL.VeryHeavy;
+                }
+            }
+            else if (uncensorLevel == UNCENSOR_LEVEL.VeryHeavy)
+            {
+                if (GUILayout.Button("CURRENT UNSENCOR_LEVEL: VERY HEAVY"))
+                {
+                    uncensorLevel = UNCENSOR_LEVEL.VeryLight;
+                }
+            }
+            configUncensorLevel.Value = uncensorLevel;
+        }
+
         bool foldoutOtherSetMoney = false;
         bool foldoutSetDanger = false;
         bool foldoutSetWeather = false;
@@ -2945,6 +3002,8 @@ namespace AliceInGradleDemosaicMod
                                  "DEBUGNOEVENT", "DEBUGNOVOICE", "DEBUGRELOADMTR", "DEBUGTIMESTAMP", "DEBUGALBUMUNLOCK", "DEBUGSTABILIZE_DRAW",
                                  "DEBUGMIGHTY", "DEBUGNODAMAGE", "DEBUGWEAK", "DEBUGBENCHMARK", "DEBUGSUPERCYCLONE", "DEBUGENG_MODE", "DEBUGSPEFFECT"
                                 ];
+
+                uncensorLevelButton();
 
                 toggleButton("UNCENSOR RESTROOM", Debug.UNCENSOR_RESTROOM, () =>
                 {
@@ -3488,6 +3547,30 @@ namespace AliceInGradleDemosaicMod
 
         public static bool setUseMosaicToFalse(object __instance, bool set = false)
         {
+            bool ret = false;
+
+            switch(uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             Type instanceType = __instance.GetType();
             Type thisType = null;
 
@@ -3521,6 +3604,30 @@ namespace AliceInGradleDemosaicMod
 
         public static bool setEnabledToFalse(object __instance, bool set = false)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             Type instanceType = __instance.GetType();
             Type thisType = null;
 
@@ -3554,9 +3661,86 @@ namespace AliceInGradleDemosaicMod
             }
             return false;
         }
+        public static bool setAutoResolutionToTrue(object __instance, bool set = false)
+        {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
+            Type instanceType = __instance.GetType();
+            Type thisType = null;
+
+            if (ftMosaicType != null && instanceType == ftMosaicType)
+            {
+                thisType = ftMosaicType;
+            }
+            else if (instanceType == typeof(MosaicShower))
+            {
+                thisType = typeof(MosaicShower);
+            }
+            else
+            {
+                thisType = instanceType;
+                return false;
+            }
+
+            try
+            {
+                ((MosaicShower)__instance).auto_resolution = !set;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex.ToString());
+            }
+            return false;
+        }
 
         public static bool callDestruct(object __instance, bool set = false)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             try
             {
                 Type instanceType = __instance.GetType();
@@ -3588,13 +3772,39 @@ namespace AliceInGradleDemosaicMod
 
         public static bool drawToMeshEx(object __instance)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
             callDestruct(__instance);
@@ -3603,13 +3813,39 @@ namespace AliceInGradleDemosaicMod
 
         public static bool drawToMesh(object __instance, Camera Cam)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
             callDestruct(__instance);
@@ -3619,11 +3855,13 @@ namespace AliceInGradleDemosaicMod
         {
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
             callDestruct(__instance);
@@ -3632,13 +3870,39 @@ namespace AliceInGradleDemosaicMod
         }
         public static bool setTarget(object __instance, IMosaicDescriptor _Targ, bool force)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
             callDestruct(__instance);
@@ -3648,13 +3912,39 @@ namespace AliceInGradleDemosaicMod
 
         public static bool countMosaic(object __instance, ref int __result, bool only_on_sensitive)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
             callDestruct(__instance);
@@ -3664,13 +3954,39 @@ namespace AliceInGradleDemosaicMod
         }
         public static bool countMosaic2(object __instance, ref int __result, bool only_sensitive)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setUseMosaicToFalse(__instance);
             setEnabledToFalse(__instance);
             callDestruct(__instance);
@@ -3684,13 +4000,39 @@ namespace AliceInGradleDemosaicMod
                ref MeshAttachment OutMesh,
                ref Spine.Slot BelongSlot, ref bool __result, object __instance)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
             callDestruct(__instance);
@@ -3706,13 +4048,39 @@ namespace AliceInGradleDemosaicMod
             ref Spine.Slot BelongSlot,
             SpineViewer TargetSpv, ref bool __result, object __instance)
         {
+            bool ret = false;
+
+            switch (uncensorLevel)
+            {
+                case UNCENSOR_LEVEL.VeryLight:
+                    ret = true;
+                    break;
+                case UNCENSOR_LEVEL.Light:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Medium:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.Heavier:
+                    ret = false;
+                    break;
+                case UNCENSOR_LEVEL.VeryHeavy:
+                    ret = false;
+                    break;
+            }
+
+            if (ret)
+                return true;
+
             if (!Debug.UNCENSOR)
             {
+                setAutoResolutionToTrue(__instance, true);
                 setEnabledToFalse(__instance, true);
                 setUseMosaicToFalse(__instance, true);
                 callDestruct(__instance, true);
                 return true;
             }
+            setAutoResolutionToTrue(__instance);
             setEnabledToFalse(__instance);
             setUseMosaicToFalse(__instance);
             callDestruct(__instance);
