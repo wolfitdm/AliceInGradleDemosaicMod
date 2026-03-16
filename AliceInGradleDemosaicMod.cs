@@ -19,9 +19,12 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Web;
+using System.Windows.Forms;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.NVIDIA;
 using XX;
+using static Den.Tools.Splines.Node;
 using static nel.QuestTracker;
 using static nel.UiHkdsChat;
 using static NetworkDebugStart;
@@ -334,27 +337,27 @@ namespace AliceInGradleDemosaicMod
         {
             if (!cursorIsInit)
             {
-                defaultCursorLockMode = Cursor.lockState;
-                cursorIsVisible = Cursor.visible;
+                defaultCursorLockMode = UnityEngine.Cursor.lockState;
+                cursorIsVisible = UnityEngine.Cursor.visible;
                 cursorIsInit = true;
             }
 
             if (!enableMe)
             {
-                Cursor.lockState = defaultCursorLockMode;
-                Cursor.visible = cursorIsVisible;
+                UnityEngine.Cursor.lockState = defaultCursorLockMode;
+                UnityEngine.Cursor.visible = cursorIsVisible;
                 return;
             }
 
             if (!showMenu)
             {
-                Cursor.lockState = defaultCursorLockMode;
-                Cursor.visible = cursorIsVisible;
+                UnityEngine.Cursor.lockState = defaultCursorLockMode;
+                UnityEngine.Cursor.visible = cursorIsVisible;
                 return;
             }
 
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
+            UnityEngine.Cursor.lockState = CursorLockMode.None;
+            UnityEngine.Cursor.visible = true;
 
             UnityEngine.Event e = UnityEngine.Event.current;
 
@@ -387,6 +390,26 @@ namespace AliceInGradleDemosaicMod
 
             public static bool USE_UNSAFE_FUNCS = true;
 
+            public static void ExecuteHarmonyPatches()
+            {
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SetGameValues), typeof(UiBenchMenu), "run", "run", false, true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SetGameValues), typeof(UiBenchMenu), "FnChangedMenu", "FnChangedMenu", false, true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+            }
             public static void initSetGameValuesVars()
             {
                 USE_UNSAFE_FUNCS = updateVarFirstForce("SetGameValues", "USE_UNSAFE_FUNCS", true);
@@ -593,6 +616,278 @@ namespace AliceInGradleDemosaicMod
                         break;
                 }
                 noel.setOutfitType(outfitS, true, true);
+            }
+
+            private static UiBenchMenu lastInstance = null;
+            private static UiGameMenu GM = null;
+            private static Type enumType = null;
+            private static MethodInfo initCategoryEdit = null;
+
+            private static void FnChangedMenu(BtnContainerRadio<aBtn> _B, int pre_value, int cur_value, UiBenchMenu __instance)
+            {
+                if (lastInstance == null)
+                {
+                    lastInstance = __instance;
+                }
+                if (GM == null)
+                {
+                    GM = Traverse.Create(__instance).Field("GM").GetValue<UiGameMenu>();
+                }
+
+                if (initCategoryEdit == null)
+                {
+                    MethodInfo[] methods = typeof(UiGameMenu).GetMethods();
+
+                    if (methods != null)
+                    {
+                        foreach (MethodInfo method in methods)
+                        {
+                            Logger.LogInfo(method.Name);
+                            if (method.Name == "initCategoryEdit")
+                            {
+                                initCategoryEdit = method;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (initCategoryEdit != null && enumType == null)
+                {
+                    ParameterInfo[] parameters = initCategoryEdit.GetParameters();
+
+                    if (parameters != null && parameters.Length != 0)
+                    {
+                        enumType = parameters[0].ParameterType;
+                    }
+                }
+
+                /*Logger.LogInfo("lastInstance != null: " + (lastInstance != null).ToString());
+                Logger.LogInfo("GM != null: " + (GM != null).ToString());
+                Logger.LogInfo("initCategoryEdit != null: " + (initCategoryEdit != null).ToString());*/
+            }
+            private static void run(float fcnt, UiBenchMenu __instance)
+            {
+                if (lastInstance == null)
+                {
+                    lastInstance = __instance;
+
+                }
+                if (GM == null)
+                {
+                    GM = Traverse.Create(__instance).Field("GM").GetValue<UiGameMenu>();
+                }
+
+                if (initCategoryEdit == null)
+                {
+                    MethodInfo[] methods = typeof(UiGameMenu).GetMethods(BindingFlags.Instance | BindingFlags.NonPublic);
+
+                    if (methods != null)
+                    {
+                        foreach (MethodInfo method in methods)
+                        {
+                            Logger.LogInfo(method.Name);
+                            if (method.Name == "initCategoryEdit")
+                            {
+                                initCategoryEdit = method;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (initCategoryEdit != null && enumType == null)
+                {
+                    ParameterInfo[] parameters = initCategoryEdit.GetParameters();
+
+                    if (parameters != null && parameters.Length != 0)
+                    {
+                        enumType = parameters[0].ParameterType;
+                    }
+                }
+
+                /*Logger.LogInfo("lastInstance != null: " + (lastInstance != null).ToString());
+                Logger.LogInfo("GM != null: " + (GM != null).ToString());
+                Logger.LogInfo("initCategoryEdit != null: " + (initCategoryEdit != null).ToString());*/
+            }
+
+            private static void executeInitCategoryEdit(int value, bool set = false)
+            {
+                if (initCategoryEdit == null)
+                {
+                    Logger.LogInfo("initCategoryEdit == null");
+                    return;
+                }
+
+                if (enumType == null)
+                {
+                    Logger.LogInfo("enumType == null");
+                    return;
+                }
+
+                object enumValue = Enum.ToObject(enumType, value);
+
+                if (enumValue == null)
+                {
+                    Logger.LogInfo("enumValue == null");
+                    return;
+                }
+
+                try
+                {
+                    // Call the method via reflection
+                    initCategoryEdit.Invoke(GM, new object[] { enumValue, set });
+                } catch (Exception ex)
+                {
+                }
+            }
+
+            public static string[] getBenchCmds()
+            {
+                return new string[] { "wait_nightingale", "fast_travel", "fast_travel_home", "save", "cure_hp", "cure_cloth", "cure_mp", "cure_ep", "empty_stomach", "cure_egged", "cure_fear", "cure_fear_home", "pee" };
+            }
+
+            public static string[] getBenchCmdsDirect()
+            {
+                return new string[] { 
+                                      "wait_nightingale", "fast_travel", "fast_travel_home", "save",
+                                      "cure_hp", "cure_cloth", "cure_mp", "cure_ep", "empty_stomach",
+                                      "cure_egged", "cure_fear", "cure_fear_home", "pee_excrete", "pee",
+                                      "restroom_cure_egged", "shower_clean_cure_cloth", "shower_cure_cloth",
+                                      "shower_clean", "shower"
+                                    };
+            }
+            public static void executeBenchCmd(string cmd)
+            {
+                init();
+                if (!isInit)
+                {
+                    return;
+                }
+
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
+
+                if (lastInstance == null)
+                {
+                    return;
+                }
+
+                if (GM == null)
+                {
+                    return;
+                }
+
+                switch (cmd)
+                {
+                    case "wait_nightingale_direct":
+                        lastInstance.deactivateTemp();
+                        UiBenchMenu.ExecuteWaitNightingale();
+                        break;
+                    case "fast_travel_direct":
+                        lastInstance.deactivateTemp();
+                        executeInitCategoryEdit(5);
+                        break;
+                    case "fast_travel_home_direct":
+                        int num1 = !getM2D().isSafeArea() ? 1 : 0;
+                        WholeMapItem.WMTransferPoint.WMRectItem WmRect = (WholeMapItem.WMTransferPoint.WMRectItem)null;
+                        WholeMapItem DepWM = (WholeMapItem)null;
+                        Map2d SrcMp = (Map2d)null;
+                        if (num1 != 0)
+                            WmRect = getM2D().WM.getDepertureRectSafeAreaMemory(COOK.getCurrentFile().safe_area_memory, ref SrcMp, ref DepWM);
+                        if (num1 == 0 || WmRect == null)
+                        {
+                            return;
+                        }
+                        lastInstance.deactivateTemp();
+                        UiBenchMenu.ExecuteFastTravel(new WMIconPosition(), DepWM, SrcMp, WmRect);
+                        break;
+                    case "save_direct":
+                        lastInstance.deactivateTemp();
+                        executeInitCategoryEdit(8);
+                        break;
+                    case "wait_nightingale":
+                    case "fast_travel":
+                    case "fast_travel_home":
+                    case "save":
+                    case "cure_hp":
+                    case "cure_cloth":
+                    case "cure_mp":
+                    case "cure_ep":
+                    case "empty_stomach":
+                    case "cure_egged":
+                    case "cure_fear":
+                    case "cure_fear_home":
+                    case "pee":
+                        UiBenchMenu.ExecuteBenchCmd(cmd);
+                        break;
+                    default:
+                        if (int.TryParse(cmd, out int num))
+                        {
+                            UiBenchMenu.playEvent(num);
+                        }
+                        break;
+                }
+            }
+
+            public static void executeBenchCmdDirect(string cmd)
+            {
+                init();
+                
+                if (!isInit)
+                {
+                    return;
+                }
+
+                if (!use_unsafe_func())
+                {
+                    return;
+                }
+
+                PRMain pr = getNoel();
+                switch (cmd)
+                {
+                    case "cure_cloth":
+                        pr.UP.CutinMng.initBenchCureCloth(0, true, true);
+                        cmd = "shower_clean_cure_cloth";
+                        UiBenchMenu.executeOtherCommand(cmd, false);
+                        break;
+                    case "cure_egged":
+                    case "restroom_cure_egged":
+                    case "pee_excrete":
+                    case "pee":
+                    case "shower_clean_cure_cloth":
+                    case "shower_cure_cloth":
+                    case "shower_clean":
+                    case "shower":
+                        UiBenchMenu.executeOtherCommand(cmd, false);
+                    break;
+                    case "cure_ep":
+                        pr.cureFull(false, true);
+                        pr.initMasturbation(true, true);
+                        break;
+                    case "cure_fear":
+                        pr.EpCon.FearFill.cureOnBench(0, false);
+                        break;
+                    case "cure_hp":
+                        pr.UP.CutinMng.initBenchCureHp(0, pr.BetoMng.is_torned);
+                        pr.cureHp((int)pr.get_maxhp());
+                        Traverse.Create(pr).Field("DMG").Method("setHpCrack", new object[] { 0 });
+                        break;
+                    case "cure_mp":
+                        pr.recheck_emot_in_gm = true;
+                        pr.cureFull(true, false);
+                        break;
+                    case "empty_stomach":
+                        cmd = "pee_excrete";
+                        UiBenchMenu.executeOtherCommand(cmd, false);
+                        break;
+                    default:
+                        executeBenchCmd(cmd+"_direct");
+                        break;
+                }
             }
 
             public static void unlockBenchMenu()
@@ -2223,6 +2518,7 @@ namespace AliceInGradleDemosaicMod
             public static bool PervertEpItemEffect = false;
             public static bool PervertEPDamageMultiplier = false;
             public static bool PervertEnableMultipleOrgasmForAll = false;
+            public static bool PervertGetTheMaximumNumberOfOrgasms = false;
             public static bool PervertEasierOrgasmWithHighEP = false;
             public static bool PervertSadismMode = false;
             public static bool PervertMasochismMode = false;
@@ -2235,6 +2531,7 @@ namespace AliceInGradleDemosaicMod
                 PervertEpItemEffect = updateVarFirst("NoelPervert", "PervertEpItemEffect");
                 PervertEPDamageMultiplier = updateVarFirst("NoelPervert", "PervertEPDamageMultiplier");
                 PervertEnableMultipleOrgasmForAll = updateVarFirst("NoelPervert", "PervertEnableMultipleOrgasmForAll");
+                PervertGetTheMaximumNumberOfOrgasms = updateVarFirst("NoelPervert", "PervertGetTheMaximumNumberOfOrgasms");
                 PervertEasierOrgasmWithHighEP = updateVarFirst("NoelPervert", "PervertEasierOrgasmWithHighEP");
                 PervertSadismMode = updateVarFirst("NoelPervert", "PervertSadismMode");
                 PervertMasochismMode = updateVarFirst("NoelPervert", "PervertMasochismMode");
@@ -2253,6 +2550,7 @@ namespace AliceInGradleDemosaicMod
                 updateVarSecond("NoelPervert", "PervertEpItemEffect", PervertEpItemEffect);
                 updateVarSecond("NoelPervert", "PervertEPDamageMultiplier", PervertEPDamageMultiplier);
                 updateVarSecond("NoelPervert", "PervertEnableMultipleOrgasmForAll", PervertEnableMultipleOrgasmForAll);
+                updateVarSecond("NoelPervert", "PervertGetTheMaximumNumberOfOrgasms", PervertGetTheMaximumNumberOfOrgasms);
                 updateVarSecond("NoelPervert", "PervertEasierOrgasmWithHighEP", PervertEasierOrgasmWithHighEP);
                 updateVarSecond("NoelPervert", "PervertSadismMode", PervertSadismMode);
                 updateVarSecond("NoelPervert", "PervertMasochismMode", PervertMasochismMode);
@@ -2361,34 +2659,53 @@ namespace AliceInGradleDemosaicMod
             }
             private static bool NoelPervertEnableMultipleOrgasmForAll(ref EpManager __instance, ref float __result, EPCATEG target)
             {
-                PR Pr = __instance.Pr;
-                Pr.Ser.Add(SER.FORBIDDEN_ORGASM);
-                Pr.Ser.Add(SER.SEXERCISE);
-                EpSuppressor Suppressor = Traverse.Create(__instance).Field("Suppressor").GetValue<EpSuppressor>();
-                for (int i = 0; i < 30; i++)
+                if (PervertGetTheMaximumNumberOfOrgasms)
                 {
-                    Suppressor.Orgasmed(target, 0);
-                }
-                float[] Ases_orgasmable = Traverse.Create(__instance).Field("Ases_orgasmable").GetValue<float[]>();
-                float t_sage = Traverse.Create(__instance).Field("t_sage").GetValue<float>();
-                float num = Ases_orgasmable[(int)target];
-                int num2 = Suppressor.Sum();
-                if (num2 != 0 || t_sage > 0f)
-                {
-                    num = X.NI(num, Ases_orgasmable[11], X.ZLINE(num2 - 2, 8f));
-                }
+                    PR Pr = __instance.Pr;
+                    Pr.Ser.Add(SER.FORBIDDEN_ORGASM);
+                    Pr.Ser.Add(SER.SEXERCISE);
+                    EpSuppressor Suppressor = Traverse.Create(__instance).Field("Suppressor").GetValue<EpSuppressor>();
+                    for (int i = 0; i < 30; i++)
+                    {
+                        Suppressor.Orgasmed(target, 0);
+                    }
 
-                num += X.NI(0.08f, 0.2f, num);
-                num += 0.4f;
-                float orgasmableRatio = Suppressor.getOrgasmableRatio(target);
-                __result = num * ((orgasmableRatio == 1f) ? 1f : (Suppressor.getOrgasmableRatio(target) - 0.004f));
+                    try
+                    {
+                        float[] Ases_orgasmable = Traverse.Create(__instance).Field("Ases_orgasmable").GetValue<float[]>();
+                        float t_sage = Traverse.Create(__instance).Field("t_sage").GetValue<float>();
+                        float num = Ases_orgasmable[(int)target];
+                        int num2 = Suppressor.Sum();
+                        if (num2 != 0 || t_sage > 0f)
+                        {
+                            num = X.NI(num, Ases_orgasmable[11], X.ZLINE(num2 - 2, 8f));
+                        }
 
-                Logger.LogInfo("orgasm_result: " + __result);
-                if (PervertEnableMultipleOrgasmForAll)
-                {
-                    __result = 4f;
+                        num += X.NI(0.08f, 0.2f, num);
+                        num += 0.4f;
+                        float orgasmableRatio = Suppressor.getOrgasmableRatio(target);
+                        __result = num * ((orgasmableRatio == 1f) ? 1f : (Suppressor.getOrgasmableRatio(target) - 0.004f));
+                        Logger.LogInfo("orgasm_result ver 1: " + __result);
+                    } catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    if (__result < 1f)
+                    {
+                        __result = 1f;
+                    }
+
                     return false;
                 }
+
+                if (PervertEasierOrgasmWithHighEP)
+                {
+                    __result = 1f;
+                    Logger.LogInfo("orgasm_result ver 2: " + __result);
+                    return false;
+                }
+
                 return true;
             }
 
@@ -2406,18 +2723,6 @@ namespace AliceInGradleDemosaicMod
                     return false;
                 }
                 return true;
-            }
-            private static bool NoelPervertEasierOrgasmWithHighEP(ref float __result)
-            {
-                if (PervertEasierOrgasmWithHighEP)
-                {
-                    __result = 1;
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
             }
             private static bool NoelPervertSadismMode(NelAttackInfo Atk, ref HITTYPE add_hittype, bool force)
             {
@@ -2441,7 +2746,7 @@ namespace AliceInGradleDemosaicMod
             {
                 force = val > 0;
                 //if (Atk == null || Atk.AttackFrom is PR)
-                if (Atk == null || Atk.AttackFrom is PR)
+                if (Atk == null)
                 {
                     return true;
                 }
@@ -2987,6 +3292,8 @@ namespace AliceInGradleDemosaicMod
         bool foldoutUnlockables = false;
         bool foldoutAddItem = false;
         bool foldoutAddItemList = false;
+        bool foldoutBenchMenu = false;
+        bool foldoutBenchMenuDirect = false;
         string weatherText = "0110111";
         int money = 0;
         int level = 0;
@@ -3299,6 +3606,10 @@ namespace AliceInGradleDemosaicMod
                 {
                     NoelPervert.PervertEnableMultipleOrgasmForAll = !NoelPervert.PervertEnableMultipleOrgasmForAll;
                 });
+                toggleButton("PervertGetTheMaximumNumberOfOrgasms", NoelPervert.PervertGetTheMaximumNumberOfOrgasms, () =>
+                {
+                    NoelPervert.PervertGetTheMaximumNumberOfOrgasms = !NoelPervert.PervertGetTheMaximumNumberOfOrgasms;
+                });
                 toggleButton("PervertEasierOrgasmWithHighEP", NoelPervert.PervertEasierOrgasmWithHighEP, () =>
                 {
                     NoelPervert.PervertEasierOrgasmWithHighEP = !NoelPervert.PervertEasierOrgasmWithHighEP;
@@ -3452,6 +3763,32 @@ namespace AliceInGradleDemosaicMod
                             SetGameValues.SetWeatherEx(current_weather_list);
                         });
                     }
+                }
+            }
+
+            foldoutBenchMenuDirect = EditorLikeFoldout(foldoutBenchMenuDirect, "Bench Menu (Skip Checks)");
+
+            if (foldoutBenchMenuDirect)
+            {
+                foreach (string key in SetGameValues.getBenchCmdsDirect())
+                {
+                    actionButton(key, () =>
+                    {
+                        SetGameValues.executeBenchCmdDirect(key);
+                    });
+                }
+            }
+
+            foldoutBenchMenuDirect = EditorLikeFoldout(foldoutBenchMenuDirect, "Bench Menu (Must bank menu opened at once)");
+
+            if (foldoutBenchMenuDirect)
+            {
+                foreach (string key in SetGameValues.getBenchCmds())
+                {
+                    actionButton(key, () =>
+                    {
+                        SetGameValues.executeBenchCmd(key);
+                    });
                 }
             }
 
@@ -3634,6 +3971,7 @@ namespace AliceInGradleDemosaicMod
             SuperNoel.ExecuteHarmonyPatches();
             NoelPervert.ExecuteHarmonyPatches();
             DebugMe.ExecuteHarmonyPatches();
+            SetGameValues.ExecuteHarmonyPatches();
         }
 
         public static bool setUseMosaicToFalse(object __instance, bool set = false)
