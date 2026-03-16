@@ -1931,6 +1931,14 @@ namespace AliceInGradleDemosaicMod
                 }
                 try
                 {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(PR), "applyDamage", "SuperNoelInvincible", true, false, new Type[] { typeof(NelAttackInfo), typeof(bool) });
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+                try
+                {
                     PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(PR), "runPhysics", "SuperNoelInfiniteJump", true, false);
                 }
                 catch (Exception ex)
@@ -2105,7 +2113,7 @@ namespace AliceInGradleDemosaicMod
                 return true;
             }
 
-            private static bool SuperNoelInvincible(ref int __result)
+            private static bool SuperNoelInvincible(NelAttackInfo Atk, bool force, ref int __result)
             {
                 if (Invincible)
                 {
