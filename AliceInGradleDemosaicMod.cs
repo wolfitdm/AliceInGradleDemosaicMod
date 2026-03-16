@@ -3466,6 +3466,14 @@ namespace AliceInGradleDemosaicMod
                 toggleButton("Invincible", SuperNoel.Invincible, () =>
                 {
                     SuperNoel.Invincible = !SuperNoel.Invincible;
+
+                    try
+                    {
+                        Debug.DEBUGNODAMAGE = X.DEBUGNODAMAGE = SuperNoel.Invincible;
+                    }
+                    catch (Exception ex)
+                    {
+                    }
                 });
 
                 toggleButton("DamageMultiplier", SuperNoel.DamageMultiplier, () =>
