@@ -3605,7 +3605,7 @@ namespace AliceInGradleDemosaicMod
                 if (SuperNoel.DamageMultiplier)
                 {
                     SuperNoel.hp_dmg_def = slider("DamageMultiplierHP", SuperNoel.hp_dmg_def, 0, 1000);
-                    SuperNoel.hp_dmg_def = slider("DamageMultiplierMP", SuperNoel.hp_dmg_def, 0, 1000);
+                    SuperNoel.mp_dmg_def = slider("DamageMultiplierMP", SuperNoel.mp_dmg_def, 0, 1000);
                 }
 
                 toggleButton("InfinteBomb", SuperNoel.InfinteBomb, () =>
