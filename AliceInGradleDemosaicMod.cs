@@ -1255,6 +1255,10 @@ namespace AliceInGradleDemosaicMod
             {
                 uncensorSpineAnimFile("stand_weak.dat", uncensor, "stand_weak_ver2.dat");
             }
+            public static void uncensorStandWeakVersion3(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_weak.dat", uncensor, "stand_weak_ver3.dat");
+            }
             public static void uncensorDamageA(bool uncensor = true)
             {
                 uncensorSpineAnimFile("damage_a", uncensor);
@@ -1357,6 +1361,8 @@ namespace AliceInGradleDemosaicMod
 
             public static bool UNCENSOR_STAND_WEAK_VERSION2 = true;
 
+            public static bool UNCENSOR_STAND_WEAK_VERSION3 = true;
+
             public static bool UNCENSOR_DAMAGE_A = true;
 
             public static bool UNCENSOR_DAMAGE_B = true;
@@ -1424,6 +1430,8 @@ namespace AliceInGradleDemosaicMod
                 UNCENSOR_STAND_WEAK = updateVarFirstForce("Debug", "UNCENSOR_STAND_WEAK");
 
                 UNCENSOR_STAND_WEAK_VERSION2 = updateVarFirstForce("Debug", "UNCENSOR_STAND_WEAK_VERSION2");
+
+                UNCENSOR_STAND_WEAK_VERSION3 = updateVarFirstForce("Debug", "UNCENSOR_STAND_WEAK_VERSION3");
 
                 UNCENSOR_DAMAGE_A = updateVarFirstForce("Debug", "UNCENSOR_DAMAGE_A");
 
@@ -1496,6 +1504,8 @@ namespace AliceInGradleDemosaicMod
                 updateVarSecondForce("Debug", "UNCENSOR_STAND_WEAK", UNCENSOR_STAND_WEAK);
 
                 updateVarSecondForce("Debug", "UNCENSOR_STAND_WEAK_VERSION2", UNCENSOR_STAND_WEAK_VERSION2);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_WEAK_VERSION3", UNCENSOR_STAND_WEAK_VERSION3);
 
                 updateVarSecondForce("Debug", "UNCENSOR_DAMAGE_A", UNCENSOR_DAMAGE_A);
 
@@ -3542,6 +3552,13 @@ namespace AliceInGradleDemosaicMod
                     Debug.UNCENSOR_STAND_WEAK_VERSION2 = !Debug.UNCENSOR_STAND_WEAK_VERSION2;
 
                     SetGameValues.uncensorStandWeakVersion2(Debug.UNCENSOR_STAND_WEAK_VERSION2);
+                });
+
+                toggleButton("UNCENSOR STAND WEAK VERSION 3 (FULL NUDE)", Debug.UNCENSOR_STAND_WEAK_VERSION3, () =>
+                {
+                    Debug.UNCENSOR_STAND_WEAK_VERSION3 = !Debug.UNCENSOR_STAND_WEAK_VERSION3;
+
+                    SetGameValues.uncensorStandWeakVersion3(Debug.UNCENSOR_STAND_WEAK_VERSION3);
                 });
 
                 toggleButton("UNCENSOR DAMAGE A", Debug.UNCENSOR_DAMAGE_A, () =>
