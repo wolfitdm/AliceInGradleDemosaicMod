@@ -19,12 +19,14 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Remoting.Messaging;
 using System.Web;
+using System.Web.SessionState;
 using System.Windows.Forms;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.NVIDIA;
 using XX;
 using static Den.Tools.Splines.Node;
+using static nel.ItemStorage;
 using static nel.QuestTracker;
 using static nel.UiHkdsChat;
 using static NetworkDebugStart;
@@ -1824,6 +1826,7 @@ namespace AliceInGradleDemosaicMod
             public static bool DamageMultiplier = false;
             public static bool InfinteBomb = false;
             public static bool InfiniteJump = false;
+            public static bool InfiniteItemsSize = false;
             public static bool DurableShield = false;
             public static bool DisableGasDamage = false;
             public static bool ImmuneToMapThorn = false;
@@ -1848,6 +1851,8 @@ namespace AliceInGradleDemosaicMod
                 DamageMultiplier = updateVarFirst("SuperNoel", "DamageMultiplier");
                 InfinteBomb = updateVarFirst("SuperNoel", "InfiniteBomb");
                 InfiniteJump = updateVarFirst("SuperNoel", "InfiniteJump");
+                InfiniteItemsSize = updateVarFirst("SuperNoel", "InfiniteItemsSize");
+                unlimitedSize = (int)updateVarFirstFloat("SuperNoel", "InfiniteItemsSizeFloat");
                 DurableShield = updateVarFirst("SuperNoel", "DurableShield");
                 DisableGasDamage = updateVarFirst("SuperNoel", "DisableGasDamage");
                 ImmuneToMapThorn = updateVarFirst("SuperNoel", "ImmuneToMapThorn");
@@ -1881,6 +1886,8 @@ namespace AliceInGradleDemosaicMod
                 updateVarSecond("SuperNoel", "DamageMultiplier", DamageMultiplier);
                 updateVarSecond("SuperNoel", "InfiniteBomb", InfinteBomb);
                 updateVarSecond("SuperNoel", "InfiniteJump", InfiniteJump);
+                updateVarSecond("SuperNoel", "InfiniteItemsSize", InfiniteItemsSize);
+                updateVarSecondFloat("SuperNoel", "InfiniteItemsSizeFloat", unlimitedSize);
                 updateVarSecond("SuperNoel", "DurableShield", DurableShield);
                 updateVarSecond("SuperNoel", "DisableGasDamage", DisableGasDamage);
                 updateVarSecond("SuperNoel", "ImmuneToMapThorn", ImmuneToMapThorn);
@@ -2079,6 +2086,15 @@ namespace AliceInGradleDemosaicMod
                 try
                 {
                     PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(UiItemManageBox), "fnClickItemRow", "SuperNoelAddItem2", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "getItemStockable", "SuperNoelInfiniteItemsSize", true, false);
                 }
                 catch (Exception ex)
                 {
@@ -2400,6 +2416,111 @@ namespace AliceInGradleDemosaicMod
 
             public static NelItemManager IMNG = null;
             private static UiItemManageBox uiItemManageBox = null;
+
+            private static Dictionary<string, int> oldCapacities = new Dictionary<string, int>();
+            private static Dictionary<string, List<IRow>> oldCapacitiesRow = new Dictionary<string, List<IRow>>();
+            private static Dictionary<string, Traverse> oldCapacitiesRowTraverse = new Dictionary<string, Traverse>();
+
+            private static Dictionary<NelItem, int> oldCapacitiess = new Dictionary<NelItem, int>();
+
+            public static int unlimitedSize = 9999;
+            private static bool SuperNoelInfiniteItemsSize(NelItem Itm, ref int __result, ItemStorage __instance)
+            {
+                setStorageSizeByStorage(__instance, unlimitedSize, !InfiniteItemsSize);
+
+                if (!oldCapacitiess.ContainsKey(Itm))
+                {
+                    oldCapacitiess.Add(Itm, Itm.stock);
+                }
+
+                if (InfiniteItemsSize)
+                {
+                    __result = unlimitedSize;
+
+                    Itm.stock = unlimitedSize;
+                    
+                    return false;
+                } else
+                {
+                    Itm.stock = oldCapacitiess[Itm];
+                }
+
+                return true;
+            }
+
+            private static void setStorageSizeByStorage(ItemStorage storage, int size, bool set)
+            {
+                try
+                {
+                    if (!oldCapacitiesRow.ContainsKey(storage.key))
+                    {
+                        Traverse traverse = Traverse.Create(storage).Field("ARow");
+                        List<IRow> ARowStInventoryE = traverse.GetValue<List<IRow>>();
+                        oldCapacitiesRow.Add(storage.key, ARowStInventoryE);
+                        oldCapacitiesRowTraverse.Add(storage.key, traverse);
+                        if (!oldCapacities.ContainsKey(storage.key))
+                        {
+                            oldCapacities.Add(storage.key, ARowStInventoryE.Capacity);
+                        }
+                    }
+                    List<IRow> ARowStInventory = oldCapacitiesRow[storage.key];
+                    int setSize = set ? oldCapacities[storage.key] : size;
+                    ARowStInventory.Capacity = setSize;
+                    storage.row_max = setSize;
+                    oldCapacitiesRowTraverse[storage.key].SetValue(ARowStInventory);
+                    //Logger.LogInfo($"all set cool {storage.key} {setSize}");
+                } catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+            }
+            private static void setStorageSizeByName(string name, int size, bool set)
+            {
+                if (IMNG == null)
+                {
+                    return;
+                }
+
+                try
+                {
+                    Traverse traverse = Traverse.Create(IMNG).Field(name);
+                    ItemStorage StInventory = traverse.GetValue<ItemStorage>();
+                    List<IRow> ARowStInventory = Traverse.Create(StInventory).Field("ARow").GetValue<List<IRow>>();
+                    if (!oldCapacities.ContainsKey(name))
+                    {
+                        oldCapacities.Add(name, ARowStInventory.Capacity);
+                    }
+                    int setSize = set ? oldCapacities[name] : size;
+                    StInventory.row_max = setSize;
+                    ARowStInventory.Capacity = setSize;
+                    Traverse.Create(StInventory).Field("ARow").SetValue(ARowStInventory);
+                    traverse.SetValue(StInventory);
+                    //Logger.LogInfo($"all set cool {name} {setSize}");
+                } catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+            }
+
+            private static void setStorageSize(int size, bool restoreOldCapacity = false)
+            {
+                initNameToKey();
+
+                if (IMNG == null)
+                {
+                    return;
+                }
+
+                setStorageSizeByName("StInventory", size, restoreOldCapacity);
+                setStorageSizeByName("StHouseInventory", size, restoreOldCapacity);
+                setStorageSizeByName("StPrecious", size, restoreOldCapacity);
+                setStorageSizeByName("StEnhancer", size, restoreOldCapacity);
+            }
+
+            public static void setUnlimitedItems(bool set)
+            {
+                 setStorageSize(unlimitedSize, !set);
+            }
 
             public static void AddItem(string item_name, int count)
             {
@@ -3496,6 +3617,18 @@ namespace AliceInGradleDemosaicMod
                 {
                     SuperNoel.InfiniteJump = !SuperNoel.InfiniteJump;
                 });
+
+                toggleButton("InfiniteItemsSize", SuperNoel.InfiniteItemsSize, () =>
+                {
+                    SuperNoel.InfiniteItemsSize = !SuperNoel.InfiniteItemsSize;
+
+                    SuperNoel.setUnlimitedItems(SuperNoel.InfiniteItemsSize);
+                });
+
+                if (SuperNoel.InfiniteItemsSize)
+                {
+                    SuperNoel.unlimitedSize = (int)slider("InfiniteItemsSize", SuperNoel.unlimitedSize, 9999, 999999);
+                }
 
                 toggleButton("DurableShield", SuperNoel.DurableShield, () =>
                 {
