@@ -10,6 +10,7 @@ using nel;
 using nel.gm;
 using Novell.Directory.Ldap.Utilclass;
 using PixelLiner;
+using PixelLiner.PixelLinerLib;
 using Spine;
 using System;
 using System.Collections.Generic;
@@ -2120,6 +2121,24 @@ namespace AliceInGradleDemosaicMod
                 {
                     Logger.LogError(ex.ToString());
                 }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "writeBinaryTo", "ItemStorageWriteBinaryToPrefix", true, false);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "writeBinaryTo", "ItemStorageWriteBinaryToPostfix", false, true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
             }
             private static bool SuperNoelDamageMultiplier(MagicItem Mg, NelAttackInfo Atk, ref float hpdmg, ref float mpdmg, int minhpdmg0)
             {
@@ -2443,14 +2462,79 @@ namespace AliceInGradleDemosaicMod
 
             private static Dictionary<NelItem, int> oldCapacitiess = new Dictionary<NelItem, int>();
 
+            private static Dictionary<string, int> oldRowMax = new Dictionary<string, int>();
+
+            private static List<ItemStorage> storages = new List<ItemStorage>();
+
+            private static List<NelItem> itemsStorages = new List<NelItem>();
+
+            private static bool saveDataStorages = false;
+
             public static int unlimitedSize = 9999;
+            private static bool ItemStorageWriteBinaryToPrefix(ByteArray Ba)
+            {
+                saveDataStorages = true;
+                foreach (ItemStorage storage in storages)
+                {
+                    setStorageSizeByStorage(storage, unlimitedSize, true);
+                }
+
+                foreach (NelItem item in itemsStorages)
+                {
+                    if (oldCapacitiess.TryGetValue(item, out int val))
+                    {
+                        item.stock = val;
+                    }
+                }
+
+                return true;
+            }
+            private static void ItemStorageWriteBinaryToPostfix(ByteArray Ba)
+            {
+                saveDataStorages = false;
+                if (InfiniteItemsSize)
+                {
+                    foreach (ItemStorage storage in storages)
+                    {
+                        setStorageSizeByStorage(storage, unlimitedSize, false);
+                    }
+
+                    foreach (NelItem item in itemsStorages)
+                    {
+                        item.stock = unlimitedSize;
+                    }
+                }
+            }
             private static bool SuperNoelInfiniteItemsSize(NelItem Itm, ref int __result, ItemStorage __instance)
             {
+                if (saveDataStorages)
+                {
+                    if (storages.Contains(__instance))
+                    {
+                        setStorageSizeByStorage(__instance, unlimitedSize, true);
+                    }
+
+                    if (itemsStorages.Contains(Itm))
+                    {
+                        if (oldCapacitiess.TryGetValue(Itm, out int val))
+                        {
+                            Itm.stock = val;
+                        }
+                    }
+
+                    return true;
+                }
+
                 setStorageSizeByStorage(__instance, unlimitedSize, !InfiniteItemsSize);
 
                 if (!oldCapacitiess.ContainsKey(Itm))
                 {
                     oldCapacitiess.Add(Itm, Itm.stock);
+                }
+
+                if (!itemsStorages.Contains(Itm))
+                {
+                    itemsStorages.Add(Itm);
                 }
 
                 if (InfiniteItemsSize)
@@ -2483,10 +2567,22 @@ namespace AliceInGradleDemosaicMod
                             oldCapacities.Add(storage.key, ARowStInventoryE.Capacity);
                         }
                     }
+                    if (!oldRowMax.ContainsKey(storage.key))
+                    {
+                        oldRowMax.Add(storage.key, storage.row_max);
+                    }
+                    if (!storages.Contains(storage))
+                    {
+                        storages.Add(storage);
+                    }
                     List<IRow> ARowStInventory = oldCapacitiesRow[storage.key];
                     int setSize = set ? oldCapacities[storage.key] : size;
-                    ARowStInventory.Capacity = setSize;
-                    storage.row_max = setSize;
+                    int sizeRowMax = set ? oldRowMax[storage.key] : size;
+                    if (setSize >= ARowStInventory.Capacity)
+                    {
+                        ARowStInventory.Capacity = setSize;
+                    }
+                    storage.row_max = sizeRowMax;
                     oldCapacitiesRowTraverse[storage.key].SetValue(ARowStInventory);
                     //Logger.LogInfo($"all set cool {storage.key} {setSize}");
                 } catch (Exception ex)
@@ -2506,13 +2602,25 @@ namespace AliceInGradleDemosaicMod
                     Traverse traverse = Traverse.Create(IMNG).Field(name);
                     ItemStorage StInventory = traverse.GetValue<ItemStorage>();
                     List<IRow> ARowStInventory = Traverse.Create(StInventory).Field("ARow").GetValue<List<IRow>>();
-                    if (!oldCapacities.ContainsKey(name))
+                    if (!oldCapacities.ContainsKey(StInventory.key))
                     {
-                        oldCapacities.Add(name, ARowStInventory.Capacity);
+                        oldCapacities.Add(StInventory.key, ARowStInventory.Capacity);
                     }
-                    int setSize = set ? oldCapacities[name] : size;
-                    StInventory.row_max = setSize;
-                    ARowStInventory.Capacity = setSize;
+                    if (!oldRowMax.ContainsKey(StInventory.key))
+                    {
+                        oldRowMax.Add(StInventory.key, StInventory.row_max);
+                    }
+                    if (!storages.Contains(StInventory))
+                    {
+                        storages.Add(StInventory);
+                    }
+                    int setSizeCapacity = set ? oldCapacities[StInventory.key] : size;
+                    int sizeRowMax = set ? oldRowMax[StInventory.key] : size;
+                    StInventory.row_max = sizeRowMax;
+                    if (setSizeCapacity >= ARowStInventory.Capacity)
+                    {
+                        ARowStInventory.Capacity = setSizeCapacity;
+                    }
                     Traverse.Create(StInventory).Field("ARow").SetValue(ARowStInventory);
                     traverse.SetValue(StInventory);
                     //Logger.LogInfo($"all set cool {name} {setSize}");
@@ -3661,7 +3769,7 @@ namespace AliceInGradleDemosaicMod
 
                 if (SuperNoel.InfiniteItemsSize)
                 {
-                    SuperNoel.unlimitedSize = (int)slider("InfiniteItemsSize", SuperNoel.unlimitedSize, 9999, 999999);
+                    SuperNoel.unlimitedSize = (int)slider("InfiniteItemsSize", SuperNoel.unlimitedSize, 1, 999999);
                 }
 
                 toggleButton("DurableShield", SuperNoel.DurableShield, () =>
