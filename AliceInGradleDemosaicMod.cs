@@ -389,6 +389,8 @@ namespace AliceInGradleDemosaicMod
         {
             private static NelM2DBase m2d;
             private static PRNoel noel;
+            private static NelItemManager IMNG;
+            private static PR pr;
             private static bool isInit = false;
 
             public static bool USE_UNSAFE_FUNCS = true;
@@ -432,6 +434,8 @@ namespace AliceInGradleDemosaicMod
                 isInit = true;
                 m2d = M2DBase.Instance as NelM2DBase;
                 noel = m2d.getPrNoel();
+                IMNG = m2d.IMNG;
+                pr = noel;
             }
 
             public static PRNoel getNoel()
@@ -444,6 +448,18 @@ namespace AliceInGradleDemosaicMod
             {
                 init();
                 return m2d;
+            }
+
+            public static NelItemManager getIMNG()
+            {
+                init();
+                return IMNG;
+            }
+
+            public static PR getPR()
+            {
+                init();
+                return pr;
             }
 
             private static bool use_unsafe_func()
@@ -2454,6 +2470,7 @@ namespace AliceInGradleDemosaicMod
             }
 
             public static NelItemManager IMNG = null;
+            private static PR pr = null;
             private static UiItemManageBox uiItemManageBox = null;
 
             private static Dictionary<string, int> oldCapacities = new Dictionary<string, int>();
@@ -2656,10 +2673,30 @@ namespace AliceInGradleDemosaicMod
 
                 if (IMNG == null)
                 {
+                    NelItemManager inmg = SetGameValues.getIMNG();
+
+                    if (inmg != null)
+                    {
+                        IMNG = inmg;
+                    }
+                }
+
+                if (pr == null)
+                {
+                    PR _pr = SetGameValues.getPR();
+
+                    if (_pr != null)
+                    {
+                        pr = _pr;
+                    }
+                }
+
+                if (IMNG == null)
+                {
                     return;
                 }
 
-                if (uiItemManageBox == null)
+                if (pr == null)
                 {
                     return;
                 }
@@ -2693,12 +2730,19 @@ namespace AliceInGradleDemosaicMod
                     retain_grade_flag = true;
                 }
 
-                grade = Itm.individual_grade ? 0 : retain_grade_flag ? uiItemManageBox.get_grade_cursor() : new_grade - 1;
+                int off_grade = -1;
+
+                if (uiItemManageBox != null)
+                {
+                    off_grade = uiItemManageBox.get_grade_cursor();
+                }
+
+                grade = Itm.individual_grade ? 0 : retain_grade_flag ? off_grade : new_grade - 1;
                 
                 if (count > 0)
                 {
                     NelItemManager.NelItemDrop nelItemDrop = IMNG.dropManual(Itm, count, grade,
-                       uiItemManageBox.Pr.x, uiItemManageBox.Pr.y, X.NIXP(-0.003f, -0.07f) * (float)CAim._XD(uiItemManageBox.Pr.aim, 1),
+                       pr.x, pr.y, X.NIXP(-0.003f, -0.07f) * (float)CAim._XD(pr.aim, 1),
                         X.NIXP(-0.01f, -0.04f), null, false);
                     nelItemDrop.discarded = true;
                 }
@@ -2709,6 +2753,8 @@ namespace AliceInGradleDemosaicMod
                     IMNG = __instance.IMNG;
                 if (uiItemManageBox == null)
                     uiItemManageBox = __instance;
+                if (pr == null)
+                    pr = uiItemManageBox.Pr;
                 initNameToKey();
 
                 return true;
@@ -2720,6 +2766,8 @@ namespace AliceInGradleDemosaicMod
                     IMNG = __instance.IMNG;
                 if (uiItemManageBox == null)
                     uiItemManageBox = __instance;
+                if (pr == null) 
+                    pr = uiItemManageBox.Pr;
                 initNameToKey();
 
                 if (!addItemCmd)
