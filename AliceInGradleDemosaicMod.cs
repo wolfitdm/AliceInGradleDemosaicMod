@@ -2592,18 +2592,38 @@ namespace AliceInGradleDemosaicMod
                     setStorageSizeByName("StInventory", unlimitedSize, true);
                 }
 
-                if (!InfiniteItemsSize)
+                if (!originalStorages.ContainsKey("Inventory_precious"))
                 {
+                    setStorageSizeByName("StPrecious", unlimitedSize, true);
+                }
+
+                if (!oldRowMax.ContainsKey("Inventory_precious"))
+                {
+                    setStorageSizeByName("StPrecious", unlimitedSize, true);
+                }
+
+                bool ret = true;
+
+                if (originalStorages.ContainsKey("Inventory_noel") && originalStorages.ContainsKey("Inventory_precious"))
+                {
+                    ret = false;
+                }
+
+                try
+                {
+                    if ((_max > 0 ? X.Mn(i, _max - oldRowMax["Inventory_noel"]) : i) <= 0)
+                    {
+                        __result = false;
+                        return ret;
+                    }
+          
+                    originalStorages["Inventory_noel"].increaseCapacity(i);
+                    originalStorages["Inventory_precious"].Add(NelItem.GetById("workbench_capacity"), i, 0);
+                } catch {
                     return true;
                 }
 
-                if ((_max > 0 ? X.Mn(i, _max - oldRowMax["Inventory_noel"]) : i) <= 0)
-                {
-                    __result = false;
-                    return false;
-                }
-
-                return true;
+                return ret;
             }
             private static bool ItemStorageIncreaseCapacityPrefix(int i, ref bool __result, ItemStorage __instance)
             {
@@ -2617,13 +2637,19 @@ namespace AliceInGradleDemosaicMod
                     setStorageSizeByStorage(__instance, unlimitedSize, true);
                 }
 
-                oldRowMax[__instance.key] += i;
-                setStorageSizeByStorage(__instance, unlimitedSize, !InfiniteItemsSize);
+                try
+                {
 
-                if (InfiniteItemsSize)
-                   __result = true;
+                    oldRowMax[__instance.key] += i;
+                    setStorageSizeByStorage(__instance, unlimitedSize, true);
 
-                return !InfiniteItemsSize;
+                    __result = true;
+                } catch
+                {
+                    return true;
+                }
+
+                return false;
             }
 
             private static void ItemStorageClearAllItemsPostfix(int _max, ItemStorage __instance)
@@ -2638,8 +2664,11 @@ namespace AliceInGradleDemosaicMod
                     setStorageSizeByStorage(__instance, unlimitedSize, true);
                 }
 
-                oldRowMax[__instance.key] = _max;
-                setStorageSizeByStorage(__instance, unlimitedSize, !InfiniteItemsSize);
+                try
+                {
+                    oldRowMax[__instance.key] = _max;
+                    setStorageSizeByStorage(__instance, unlimitedSize, true);
+                } catch { }
             }
             private static bool SuperNoelInfiniteItemsSize(NelItem Itm, ref int __result, ItemStorage __instance)
             {
