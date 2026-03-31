@@ -2155,6 +2155,31 @@ namespace AliceInGradleDemosaicMod
                 {
                     Logger.LogError(ex.ToString());
                 }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(NelItemManager), "increaseInenvoryCapacity", "NelItemManagerIncreaseInenvoryCapacityPrefix", false, true);
+                } catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "increaseCapacity", "ItemStorageIncreaseCapacityPrefix", false, true);
+                } catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString()); 
+                }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "clearAllItems", "ItemStorageClearAllItemsPostfix", false, true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
             }
             private static bool SuperNoelDamageMultiplier(MagicItem Mg, NelAttackInfo Atk, ref float hpdmg, ref float mpdmg, int minhpdmg0)
             {
@@ -2488,14 +2513,21 @@ namespace AliceInGradleDemosaicMod
             private static bool saveDataStorages = false;
 
             public static int unlimitedSize = 9999;
-            private static bool ItemStorageWriteBinaryToPrefix(ByteArray Ba)
+
+            private static Dictionary<string, ItemStorage> originalStorages = new Dictionary<string, ItemStorage>();
+
+            private static void fixItemStoragesPrefix()
             {
                 saveDataStorages = true;
                 foreach (ItemStorage storage in storages)
                 {
                     setStorageSizeByStorage(storage, unlimitedSize, true);
                 }
+            }
 
+            private static void fixItemSizesPrefix()
+            {
+                saveDataStorages = true;
                 foreach (NelItem item in itemsStorages)
                 {
                     if (oldCapacitiess.TryGetValue(item, out int val))
@@ -2503,10 +2535,9 @@ namespace AliceInGradleDemosaicMod
                         item.stock = val;
                     }
                 }
-
-                return true;
             }
-            private static void ItemStorageWriteBinaryToPostfix(ByteArray Ba)
+
+            private static void fixItemStoragesPostfix()
             {
                 saveDataStorages = false;
                 if (InfiniteItemsSize)
@@ -2515,12 +2546,100 @@ namespace AliceInGradleDemosaicMod
                     {
                         setStorageSizeByStorage(storage, unlimitedSize, false);
                     }
-
+                }
+            }
+            private static void fixItemSizesPostfix()
+            {
+                saveDataStorages = false;
+                if (InfiniteItemsSize)
+                {
                     foreach (NelItem item in itemsStorages)
                     {
                         item.stock = unlimitedSize;
                     }
                 }
+            }
+            private static bool ItemStorageWriteBinaryToPrefix(ByteArray Ba, ItemStorage __instance)
+            {
+                saveDataStorages = true;
+                setStorageSizeByStorage(__instance, unlimitedSize, true);
+                fixItemSizesPrefix();
+                return true;
+            }
+            private static void ItemStorageWriteBinaryToPostfix(ByteArray Ba, ItemStorage __instance)
+            {
+                saveDataStorages = false;
+                if (InfiniteItemsSize)
+                {
+                    setStorageSizeByStorage(__instance, unlimitedSize, false);
+                }
+                fixItemSizesPostfix();
+            }
+            private static bool NelItemManagerIncreaseInenvoryCapacityPrefix(int i, int _max, ref bool __result, NelItemManager __instance)
+            {
+                if (IMNG == null)
+                {
+                    IMNG = __instance;
+                }
+
+                if (!originalStorages.ContainsKey("Inventory_noel"))
+                {
+                    setStorageSizeByName("StInventory", unlimitedSize, true);
+                }
+
+                if (!oldRowMax.ContainsKey("Inventory_noel"))
+                {
+                    setStorageSizeByName("StInventory", unlimitedSize, true);
+                }
+
+                if (!InfiniteItemsSize)
+                {
+                    return true;
+                }
+
+                if ((_max > 0 ? X.Mn(i, _max - oldRowMax["Inventory_noel"]) : i) <= 0)
+                {
+                    __result = false;
+                    return false;
+                }
+
+                return true;
+            }
+            private static bool ItemStorageIncreaseCapacityPrefix(int i, ref bool __result, ItemStorage __instance)
+            {
+                if (!originalStorages.ContainsKey(__instance.key))
+                {
+                    setStorageSizeByStorage(__instance, unlimitedSize, true);
+                }
+
+                if (!oldRowMax.ContainsKey(__instance.key))
+                {
+                    setStorageSizeByStorage(__instance, unlimitedSize, true);
+                }
+
+                oldRowMax[__instance.key] += i;
+                setStorageSizeByStorage(__instance, unlimitedSize, !InfiniteItemsSize);
+
+                if (InfiniteItemsSize)
+                   __result = true;
+
+                return !InfiniteItemsSize;
+            }
+
+            private static void ItemStorageClearAllItemsPostfix(int _max, ItemStorage __instance)
+            {
+                if(!originalStorages.ContainsKey(__instance.key))
+                {
+                    setStorageSizeByStorage(__instance, unlimitedSize, true);
+                }
+
+                if (!oldRowMax.ContainsKey(__instance.key))
+                {
+                    setStorageSizeByStorage(__instance, unlimitedSize, true);
+                }
+
+                oldRowMax[__instance.key] = _max;
+                setStorageSizeByStorage(__instance, unlimitedSize, !InfiniteItemsSize);
             }
             private static bool SuperNoelInfiniteItemsSize(NelItem Itm, ref int __result, ItemStorage __instance)
             {
@@ -2592,6 +2711,10 @@ namespace AliceInGradleDemosaicMod
                     {
                         storages.Add(storage);
                     }
+                    if (!originalStorages.ContainsKey(storage.key))
+                    {
+                        originalStorages.Add(storage.key, storage);
+                    }
                     List<IRow> ARowStInventory = oldCapacitiesRow[storage.key];
                     int setSize = set ? oldCapacities[storage.key] : size;
                     int sizeRowMax = set ? oldRowMax[storage.key] : size;
@@ -2611,7 +2734,16 @@ namespace AliceInGradleDemosaicMod
             {
                 if (IMNG == null)
                 {
-                    return;
+                    NelItemManager imng = SetGameValues.getIMNG();
+
+                    if (imng != null)
+                    {
+                        IMNG = imng;
+                    }
+                    else
+                    {
+                        return;
+                    }
                 }
 
                 try
@@ -2630,6 +2762,10 @@ namespace AliceInGradleDemosaicMod
                     if (!storages.Contains(StInventory))
                     {
                         storages.Add(StInventory);
+                    }
+                    if (!originalStorages.ContainsKey(StInventory.key))
+                    {
+                        originalStorages.Add(StInventory.key, StInventory);
                     }
                     int setSizeCapacity = set ? oldCapacities[StInventory.key] : size;
                     int sizeRowMax = set ? oldRowMax[StInventory.key] : size;
