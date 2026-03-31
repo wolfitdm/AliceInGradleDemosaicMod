@@ -2158,7 +2158,7 @@ namespace AliceInGradleDemosaicMod
 
                 try
                 {
-                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(NelItemManager), "increaseInenvoryCapacity", "NelItemManagerIncreaseInenvoryCapacityPrefix", false, true);
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(NelItemManager), "increaseInenvoryCapacity", "NelItemManagerIncreaseInenvoryCapacityPrefix", true, false);
                 } catch (Exception ex)
                 {
                     Logger.LogError(ex.ToString());
@@ -2166,7 +2166,7 @@ namespace AliceInGradleDemosaicMod
 
                 try
                 {
-                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "increaseCapacity", "ItemStorageIncreaseCapacityPrefix", false, true);
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "increaseCapacity", "ItemStorageIncreaseCapacityPrefix", true, false);
                 } catch (Exception ex)
                 {
                     Logger.LogError(ex.ToString()); 
