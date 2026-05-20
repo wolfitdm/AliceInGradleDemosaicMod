@@ -31,6 +31,7 @@ using static nel.ItemStorage;
 using static nel.QuestTracker;
 using static nel.UiHkdsChat;
 using static NetworkDebugStart;
+using static System.Collections.Specialized.BitVector32;
 
 namespace AliceInGradleDemosaicMod
 {
@@ -58,6 +59,31 @@ namespace AliceInGradleDemosaicMod
         private static Dictionary<string, ConfigEntry<float>> configEntriesFloat = new Dictionary<string, ConfigEntry<float>>();
         private static Dictionary<string, float> configEntriesFirstSetFloat = new Dictionary<string, float>();
         private static AliceInGradleDemosaicMod Instance = null;
+
+        private static bool UncensorHarmonyPatches = true;
+        private static bool SuperNoelPatches = true;
+        private static bool NoelPervertPatches = true;
+        private static bool TornClothesPatches = true;
+        private static bool SetGameValuesPatches = true;
+
+        public static void initPatchesVars()
+        {
+            UncensorHarmonyPatches = updateVarFirstForce("HarmonyPatches", "UncensorHarmonyPatches");
+            SuperNoelPatches = updateVarFirstForce("HarmonyPatches", "SuperNoelPatches");
+            NoelPervertPatches = updateVarFirstForce("HarmonyPatches", "NoelPervertPatches");
+            TornClothesPatches = updateVarFirstForce("HarmonyPatches", "TornClothesPatches");
+            SetGameValuesPatches = updateVarFirstForce("HarmonyPatches", "SetGameValuesPatches");
+        }
+
+        public static void updatePatchesVars()
+        {
+            updateVarSecondForce("HarmonyPatches", "UncensorHarmonyPatches", UncensorHarmonyPatches);
+            updateVarSecondForce("HarmonyPatches", "SuperNoelPatches", SuperNoelPatches);
+            updateVarSecondForce("HarmonyPatches", "NoelPervertPatches", NoelPervertPatches);
+            updateVarSecondForce("HarmonyPatches", "TornClothesPatches", TornClothesPatches);
+            updateVarSecondForce("HarmonyPatches", "SetGameValuesPatches", SetGameValuesPatches);
+        }
+
         public static UNCENSOR_LEVEL uncensorLevel = UNCENSOR_LEVEL.VeryLight;
 
         private static ConfigEntry<bool> getConfigEntry(string section, string var, bool defaultValue = false)
@@ -318,6 +344,8 @@ namespace AliceInGradleDemosaicMod
             SuperNoel.initSuperNoelVars();
             NoelPervert.initNoelPervertVars();
             DebugMe.initDebugMeVars();
+
+            initPatchesVars();
 
             PatchAllHarmonyMethods();
 
@@ -2137,7 +2165,7 @@ namespace AliceInGradleDemosaicMod
                 {
                     Logger.LogError(ex.ToString());
                 }
-
+                
                 try
                 {
                     PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "writeBinaryTo", "ItemStorageWriteBinaryToPrefix", true, false);
@@ -2155,6 +2183,16 @@ namespace AliceInGradleDemosaicMod
                 {
                     Logger.LogError(ex.ToString());
                 }
+
+                try
+                {
+                    PatchHarmonyMethodUnityClass(typeof(AliceInGradleDemosaicMod.SuperNoel), typeof(ItemStorage), "readBinaryFrom", "ItemStorageReadBinaryFromPostfix", false, true);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex.ToString());
+                }
+
 
                 try
                 {
@@ -2575,6 +2613,19 @@ namespace AliceInGradleDemosaicMod
                 }
                 fixItemSizesPostfix();
             }
+            private static void ItemStorageReadBinaryFromPostfix(ByteReader Ba, bool read_grade, bool override_sort, bool recipe_reffer_add, int vers, bool fix_ver024, ItemStorage __instance)
+            {
+                saveDataStorages = true;
+                setStorageSizeByStorage(__instance, unlimitedSize, true);
+                fixItemSizesPrefix();
+                saveDataStorages = false;
+                if (InfiniteItemsSize)
+                {
+                    setStorageSizeByStorage(__instance, unlimitedSize, false);
+                }
+                fixItemSizesPostfix();
+            }
+
             private static bool NelItemManagerIncreaseInenvoryCapacityPrefix(int i, int _max, ref bool __result, NelItemManager __instance)
             {
                 if (IMNG == null)
@@ -3769,6 +3820,9 @@ namespace AliceInGradleDemosaicMod
         int level = 0;
         int dangerLevel = 0;
         int grade = 0;
+        bool gameSettings = false;
+        bool harmonyPatches = false;
+
         List<WeatherItem.WEATHER> current_weather_list = new List<WeatherItem.WEATHER>();
 
         private void DrawCheatWindow(int windowID)
@@ -3781,27 +3835,63 @@ namespace AliceInGradleDemosaicMod
 
             GUILayout.Label("BepInEx/config/com.wolfitdm.AliceInGradleDemosaicMod.cfg");
 
-            toggleButton("Save Settings In Config", saveSettingsInConfig.Value, () =>
-            {
-                saveSettingsInConfig.Value = !saveSettingsInConfig.Value;
-            });
+            gameSettings = EditorLikeFoldout(gameSettings, "Game Settings");
 
-            toggleButton("Is Menu Default Opened", configMenuDefaultOpen.Value, () =>
+            if (gameSettings)
             {
-                configMenuDefaultOpen.Value = !configMenuDefaultOpen.Value;
-            });
+                toggleButton("Save Settings In Config", saveSettingsInConfig.Value, () =>
+                {
+                    saveSettingsInConfig.Value = !saveSettingsInConfig.Value;
+                });
 
-            toggleButton("Use unsafe functions", SetGameValues.USE_UNSAFE_FUNCS, () =>
+                toggleButton("Is Menu Default Opened", configMenuDefaultOpen.Value, () =>
+                {
+                    configMenuDefaultOpen.Value = !configMenuDefaultOpen.Value;
+                });
+
+                toggleButton("Use unsafe functions", SetGameValues.USE_UNSAFE_FUNCS, () =>
+                {
+                    SetGameValues.USE_UNSAFE_FUNCS = !SetGameValues.USE_UNSAFE_FUNCS;
+                });
+                actionButton("Find and Export all textures", () =>
+                {
+                    SetGameValues.FindAndLogTextures();
+                });
+            }
+
+            harmonyPatches = EditorLikeFoldout(harmonyPatches, "Harmony Patches");
+
+            if (harmonyPatches)
             {
-                SetGameValues.USE_UNSAFE_FUNCS = !SetGameValues.USE_UNSAFE_FUNCS;
-            });
+                toggleButton("UncensorHarmonyPatches", UncensorHarmonyPatches, () =>
+                {
+                    UncensorHarmonyPatches = !UncensorHarmonyPatches;
+                });
+
+                toggleButton("SuperNoelPatches", SuperNoelPatches, () =>
+                {
+                    SuperNoelPatches = !SuperNoelPatches;
+                });
+
+                toggleButton("NoelPervertPatches", NoelPervertPatches, () =>
+                {
+                    NoelPervertPatches = !NoelPervertPatches;
+                });
+
+                toggleButton("TornClothesPatches", TornClothesPatches, () =>
+                {
+                    TornClothesPatches = !TornClothesPatches;
+                });
+
+                toggleButton("SetGameValuesPatches", SetGameValuesPatches, () =>
+                {
+                    SetGameValuesPatches = !SetGameValuesPatches;
+                });
+            }
+
+            updatePatchesVars();
 
             SetGameValues.updateSetGameValuesVars();
-
-            actionButton("Find and Export all textures", () =>
-            {
-                SetGameValues.FindAndLogTextures();
-            });
 
             // Spieler-Cheats
             foldoutPlayer = EditorLikeFoldout(foldoutPlayer, "Uncensor + Debug + Money Cheat");
@@ -4339,81 +4429,140 @@ namespace AliceInGradleDemosaicMod
                 return;
             }
 
-            Type ftMosaic = MyGetType(typeof(MosaicShower), "FtMosaic");
-
-            if (ftMosaic != null) {
-                ftMosaicType = ftMosaic;
-                try
-                {
-                    ftMosaicTypeEnabled = ftMosaicType.GetProperty("enabled", BindingFlags.Public | BindingFlags.Instance);
-                }
-                catch (Exception e)
-                {
-                    ftMosaicTypeEnabled = null;
-                }
-            }
-
-            Type mosaicShower = typeof(MosaicShower);
-
-            Type[] types = new Type[] { ftMosaic, mosaicShower };
-
-            foreach (Type type in types) {
-
-                if (type == null)
-                {
-                    continue;
-                }
-
-                try
-                {
-                    PatchHarmonyMethodUnity(type, "drawToMesh", "drawToMesh", true, false, new Type[] { typeof(Camera) });
-                } catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-
-                try
-                {
-                    PatchHarmonyMethodUnity(type, "FnDrawMosaic", "FnDrawMosaic", true, false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-
-                try
-                {
-                    PatchHarmonyMethodUnity(type, "setTarget", "setTarget", true, false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-            }
-
-            if (ftMosaic != null)
+            if (UncensorHarmonyPatches)
             {
-                try
+
+                Type ftMosaic = MyGetType(typeof(MosaicShower), "FtMosaic");
+
+                if (ftMosaic != null)
                 {
-                    PatchHarmonyMethodUnity(ftMosaic, "drawToMesh", "drawToMeshEx", true, false);
+                    ftMosaicType = ftMosaic;
+                    try
+                    {
+                        ftMosaicTypeEnabled = ftMosaicType.GetProperty("enabled", BindingFlags.Public | BindingFlags.Instance);
+                    }
+                    catch (Exception e)
+                    {
+                        ftMosaicTypeEnabled = null;
+                    }
                 }
-                catch (Exception ex)
+
+                Type mosaicShower = typeof(MosaicShower);
+
+                Type[] types = new Type[] { ftMosaic, mosaicShower };
+
+                foreach (Type type in types)
                 {
-                    Logger.LogError(ex.ToString());
+
+                    if (type == null)
+                    {
+                        continue;
+                    }
+
+                    try
+                    {
+                        PatchHarmonyMethodUnity(type, "drawToMesh", "drawToMesh", true, false, new Type[] { typeof(Camera) });
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    try
+                    {
+                        PatchHarmonyMethodUnity(type, "FnDrawMosaic", "FnDrawMosaic", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    try
+                    {
+                        PatchHarmonyMethodUnity(type, "setTarget", "setTarget", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+                }
+
+                if (ftMosaic != null)
+                {
+                    try
+                    {
+                        PatchHarmonyMethodUnity(ftMosaic, "drawToMesh", "drawToMeshEx", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    try
+                    {
+                        PatchHarmonyMethodUnity(ftMosaic, "countMosaic", "countMosaic", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    try
+                    {
+                        PatchHarmonyMethodUnity(ftMosaic, "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
                 }
 
                 try
                 {
-                    PatchHarmonyMethodUnity(ftMosaic, "countMosaic", "countMosaic", true, false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
+                    Type[] params1 = new Type[] { typeof(Matrix4x4).MakeByRefType(), typeof(int), typeof(MeshAttachment).MakeByRefType(), typeof(Spine.Slot).MakeByRefType() };
+                    Type[] params2 = new Type[] { typeof(Matrix4x4).MakeByRefType(), typeof(int), typeof(MeshAttachment).MakeByRefType(), typeof(Spine.Slot).MakeByRefType(), typeof(SpineViewer) };
+                    try
+                    {
+                        PatchHarmonyMethodUnity(typeof(AnimateCutin), "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect", true, false, params1);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
 
-                try
-                {
-                    PatchHarmonyMethodUnity(ftMosaic, "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect", true, false);
+                    try
+                    {
+                        PatchHarmonyMethodUnity(typeof(AnimateCutin), "countMosaic", "countMosaic2", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+
+                    try
+                    {
+                        PatchHarmonyMethodUnity(typeof(UIPictureBodyData), "countMosaic", "countMosaic", true, false);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+                    try
+                    {
+                        PatchHarmonyMethodUnity(typeof(UIPictureBodyData), "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect", true, false, params1);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
+                    try
+                    {
+                        PatchHarmonyMethodUnity(typeof(UIPictureBodySpine), "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect2", true, false, params2);
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.LogError(ex.ToString());
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -4421,61 +4570,25 @@ namespace AliceInGradleDemosaicMod
                 }
             }
 
-            try
+            if (SuperNoelPatches)
             {
-                Type[] params1 = new Type[] { typeof(Matrix4x4).MakeByRefType(), typeof(int), typeof(MeshAttachment).MakeByRefType(), typeof(Spine.Slot).MakeByRefType() };
-                Type[] params2 = new Type[] { typeof(Matrix4x4).MakeByRefType(), typeof(int), typeof(MeshAttachment).MakeByRefType(), typeof(Spine.Slot).MakeByRefType(), typeof(SpineViewer) };
-                try
-                {
-                    PatchHarmonyMethodUnity(typeof(AnimateCutin), "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect", true, false, params1);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-
-                try
-                {
-                    PatchHarmonyMethodUnity(typeof(AnimateCutin), "countMosaic", "countMosaic2", true, false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-
-                try
-                {
-                    PatchHarmonyMethodUnity(typeof(UIPictureBodyData), "countMosaic", "countMosaic", true, false);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-                try
-                {
-                    PatchHarmonyMethodUnity(typeof(UIPictureBodyData), "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect", true, false, params1);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-                try
-                {
-                    PatchHarmonyMethodUnity(typeof(UIPictureBodySpine), "getSensitiveOrMosaicRect", "getSensitiveOrMosaicRect2", true, false, params2);
-                }
-                catch (Exception ex)
-                {
-                    Logger.LogError(ex.ToString());
-                }
-            } catch (Exception ex)
-            {
-                Logger.LogError(ex.ToString());
+                SuperNoel.ExecuteHarmonyPatches();
             }
 
-            SuperNoel.ExecuteHarmonyPatches();
-            NoelPervert.ExecuteHarmonyPatches();
-            DebugMe.ExecuteHarmonyPatches();
-            SetGameValues.ExecuteHarmonyPatches();
+            if (NoelPervertPatches)
+            {
+                NoelPervert.ExecuteHarmonyPatches();
+            }
+
+            if (TornClothesPatches)
+            {
+                DebugMe.ExecuteHarmonyPatches();
+            }
+
+            if (SetGameValuesPatches)
+            {
+                SetGameValues.ExecuteHarmonyPatches();
+            }
         }
 
         public static bool setUseMosaicToFalse(object __instance, bool set = false)
