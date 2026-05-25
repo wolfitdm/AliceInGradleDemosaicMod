@@ -68,11 +68,11 @@ namespace AliceInGradleDemosaicMod
 
         public static void initPatchesVars()
         {
-            UncensorHarmonyPatches = updateVarFirstForce("HarmonyPatches", "UncensorHarmonyPatches");
-            SuperNoelPatches = updateVarFirstForce("HarmonyPatches", "SuperNoelPatches");
-            NoelPervertPatches = updateVarFirstForce("HarmonyPatches", "NoelPervertPatches");
-            TornClothesPatches = updateVarFirstForce("HarmonyPatches", "TornClothesPatches");
-            SetGameValuesPatches = updateVarFirstForce("HarmonyPatches", "SetGameValuesPatches");
+            UncensorHarmonyPatches = updateVarFirstForce("HarmonyPatches", "UncensorHarmonyPatches", UncensorHarmonyPatches);
+            SuperNoelPatches = updateVarFirstForce("HarmonyPatches", "SuperNoelPatches", SuperNoelPatches);
+            NoelPervertPatches = updateVarFirstForce("HarmonyPatches", "NoelPervertPatches", NoelPervertPatches);
+            TornClothesPatches = updateVarFirstForce("HarmonyPatches", "TornClothesPatches", TornClothesPatches);
+            SetGameValuesPatches = updateVarFirstForce("HarmonyPatches", "SetGameValuesPatches", SetGameValuesPatches);
         }
 
         public static void updatePatchesVars()
@@ -1310,11 +1310,11 @@ namespace AliceInGradleDemosaicMod
             }
             public static void uncensorDamageA(bool uncensor = true)
             {
-                uncensorSpineAnimFile("damage_a", uncensor);
+                uncensorSpineAnimFile("damage_a.dat", uncensor);
             }
             public static void uncensorDamageB(bool uncensor = true)
             {
-                uncensorSpineAnimFile("damage_b", uncensor);
+                uncensorSpineAnimFile("damage_b.dat", uncensor);
             }
             public static void uncensorEvImgFile(string file, bool uncensor = true)
             {
