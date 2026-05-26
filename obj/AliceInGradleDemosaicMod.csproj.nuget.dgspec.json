@@ -1,0 +1,86 @@
+{
+  "format": 1,
+  "restore": {
+    "C:\\Users\\CdemyTeilnehmer\\Downloads\\Alice in Cradle Trial Version\\AliceInGradleDemosaicMod\\AliceInGradleDemosaicMod.csproj": {}
+  },
+  "projects": {
+    "C:\\Users\\CdemyTeilnehmer\\Downloads\\Alice in Cradle Trial Version\\AliceInGradleDemosaicMod\\AliceInGradleDemosaicMod.csproj": {
+      "version": "1.0.0",
+      "restore": {
+        "projectUniqueName": "C:\\Users\\CdemyTeilnehmer\\Downloads\\Alice in Cradle Trial Version\\AliceInGradleDemosaicMod\\AliceInGradleDemosaicMod.csproj",
+        "projectName": "AliceInGradleDemosaicMod",
+        "projectPath": "C:\\Users\\CdemyTeilnehmer\\Downloads\\Alice in Cradle Trial Version\\AliceInGradleDemosaicMod\\AliceInGradleDemosaicMod.csproj",
+        "packagesPath": "C:\\Users\\CdemyTeilnehmer\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\CdemyTeilnehmer\\Downloads\\Alice in Cradle Trial Version\\AliceInGradleDemosaicMod\\obj\\",
+        "projectStyle": "PackageReference",
+        "fallbackFolders": [
+          "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
+        ],
+        "configFilePaths": [
+          "C:\\Users\\CdemyTeilnehmer\\AppData\\Roaming\\NuGet\\NuGet.Config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+          "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
+        ],
+        "originalTargetFrameworks": [
+          "net462"
+        ],
+        "sources": {
+          "C:\\Program Files (x86)\\Microsoft SDKs\\NuGetPackages\\": {},
+          "C:\\Program Files\\dotnet\\library-packs": {},
+          "https://api.nuget.org/v3/index.json": {},
+          "https://api.nuget.org/v3/index.json": {},
+          "https://nuget.bepinex.dev/v3/index.json": {}
+        },
+        "frameworks": {
+          "net462": {
+            "targetAlias": "net462",
+            "projectReferences": {}
+          }
+        },
+        "warningProperties": {
+          "warnAsError": [
+            "NU1605"
+          ]
+        },
+        "restoreAuditProperties": {
+          "enableAudit": "true",
+          "auditLevel": "low",
+          "auditMode": "direct"
+        },
+        "SdkAnalysisLevel": "10.0.100"
+      },
+      "frameworks": {
+        "net462": {
+          "targetAlias": "net462",
+          "dependencies": {
+            "BepInEx.Analyzers": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.*, )"
+            },
+            "BepInEx.PluginInfoProps": {
+              "target": "Package",
+              "version": "[2.*, )"
+            },
+            "BepInEx.Unity.Mono": {
+              "include": "Compile",
+              "target": "Package",
+              "version": "[6.0.0-be.*, )"
+            },
+            "Microsoft.NETFramework.ReferenceAssemblies": {
+              "suppressParent": "All",
+              "target": "Package",
+              "version": "[1.0.2, )"
+            },
+            "UnityEngine.Modules": {
+              "include": "Compile",
+              "target": "Package",
+              "version": "[5.6.0, )"
+            }
+          },
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.108\\RuntimeIdentifierGraph.json"
+        }
+      }
+    }
+  }
+}

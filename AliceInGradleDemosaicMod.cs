@@ -28,6 +28,7 @@ using UnityEngine.NVIDIA;
 using XX;
 using static Den.Tools.Splines.Node;
 using static nel.ItemStorage;
+using static nel.NelItem;
 using static nel.QuestTracker;
 using static nel.UiHkdsChat;
 using static NetworkDebugStart;
@@ -1292,6 +1293,10 @@ namespace AliceInGradleDemosaicMod
             {
                 uncensorSpineAnimFile("stand_normal.dat", uncensor, "stand_normal_ver3.dat");
             }
+            public static void uncensorStandNormalVersion4(bool uncensor = true)
+            {
+                uncensorSpineAnimFile("stand_normal.dat", uncensor, "stand_normal_ver4.dat");
+            }
             public static void uncensorStandWeak(bool uncensor = true)
             {
                 uncensorSpineAnimFile("stand_weak.dat", uncensor);
@@ -1406,6 +1411,8 @@ namespace AliceInGradleDemosaicMod
 
             public static bool UNCENSOR_STAND_NORMAL_VERSION3 = true;
 
+            public static bool UNCENSOR_STAND_NORMAL_VERSION4 = true;
+
             public static bool UNCENSOR_STAND_WEAK = true;
 
             public static bool UNCENSOR_STAND_WEAK_VERSION2 = true;
@@ -1477,6 +1484,8 @@ namespace AliceInGradleDemosaicMod
                 UNCENSOR_STAND_NORMAL_VERSION2 = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION2");
 
                 UNCENSOR_STAND_NORMAL_VERSION3 = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION3");
+
+                UNCENSOR_STAND_NORMAL_VERSION4 = updateVarFirstForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION4");
 
                 UNCENSOR_STAND_WEAK = updateVarFirstForce("Debug", "UNCENSOR_STAND_WEAK");
 
@@ -1553,6 +1562,8 @@ namespace AliceInGradleDemosaicMod
                 updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION2", UNCENSOR_STAND_NORMAL_VERSION2);
 
                 updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION3", UNCENSOR_STAND_NORMAL_VERSION3);
+
+                updateVarSecondForce("Debug", "UNCENSOR_STAND_NORMAL_VERSION4", UNCENSOR_STAND_NORMAL_VERSION4);
 
                 updateVarSecondForce("Debug", "UNCENSOR_STAND_WEAK", UNCENSOR_STAND_WEAK);
 
@@ -2356,7 +2367,7 @@ namespace AliceInGradleDemosaicMod
                 }
                 return true;
             }
-            private static bool SuperNoelNoPervertDisableGrabAttack2(ref bool __result, ref AbsorbManager Abm)
+            private static bool SuperNoelNoPervertDisableGrabAttack2(ref bool __result, NelAttackInfo Atk, NelM2Attacker AbsorbBy, AbsorbManager Abm, bool penetrate_absorb)
             {
                 if (NoPervertDisableGrabAttack)
                 {
@@ -2369,7 +2380,7 @@ namespace AliceInGradleDemosaicMod
                     return true;
                 }
             }
-            private static bool SuperNoelNoPervertDisableEpDamage(ref bool __result)
+            private static bool SuperNoelNoPervertDisableEpDamage(ref bool __result, EpAtk Atk, M2Attackable AttackedBy, EPCATEG_BITS bits, float lead_orgasm_multiple, bool can_execute_orgasm)
             {
                 if (NoPervertDisableEpDamage)
                 {
@@ -2382,7 +2393,7 @@ namespace AliceInGradleDemosaicMod
                 }
             }
 
-            private static bool SuperNoelNoPervertSkipGameOverPlay(ref UiGO __instance)
+            private static bool SuperNoelNoPervertSkipGameOverPlay(ref UiGO __instance, float fcnt)
             {
                 if (NoPervertSkipGameOverPlay)
                 {
@@ -2414,7 +2425,7 @@ namespace AliceInGradleDemosaicMod
                     return true;
                 }
             }
-            private static bool SuperNoelNoPervertDisableWormTrap2()
+            private static bool SuperNoelNoPervertDisableWormTrap2(bool normal_map)
             {
                 if (NoPervertDisableWormTrap)
                 {
@@ -3159,7 +3170,7 @@ namespace AliceInGradleDemosaicMod
                     Logger.LogError(ex.ToString());
                 }
             }
-            private static bool NoelPervertEpItemEffect(ref NelItem __instance, ref PR Pr)
+            private static bool NoelPervertEpItemEffect(ref NelItem __instance, PR Pr, ItemStorage Storage, int grade, IItemUser Usr)
             {
                 if (PervertEpItemEffect)
                 {
@@ -3959,6 +3970,13 @@ namespace AliceInGradleDemosaicMod
                     Debug.UNCENSOR_STAND_NORMAL_VERSION3 = !Debug.UNCENSOR_STAND_NORMAL_VERSION3;
 
                     SetGameValues.uncensorStandNormalVersion3(Debug.UNCENSOR_STAND_NORMAL_VERSION3);
+                });
+
+                toggleButton("UNCENSOR STAND NORMAL VERSION 4 (MINIROCK VERSION FULL NUDE WITH RABBIT EARS)", Debug.UNCENSOR_STAND_NORMAL_VERSION4, () =>
+                {
+                    Debug.UNCENSOR_STAND_NORMAL_VERSION4 = !Debug.UNCENSOR_STAND_NORMAL_VERSION4;
+
+                    SetGameValues.uncensorStandNormalVersion4(Debug.UNCENSOR_STAND_NORMAL_VERSION4);
                 });
 
                 toggleButton("UNCENSOR STAND WEAK (MORE BOOBS)", Debug.UNCENSOR_STAND_WEAK, () =>
@@ -5259,6 +5277,45 @@ namespace AliceInGradleDemosaicMod
             {
                 Logger.LogInfo($"AccessTool.Method original {originalMethodName} == null");
                 return;
+            }
+
+            ParameterInfo[] parameterInfosOriginal = original.GetParameters();
+            ParameterInfo[] parameterInfosPatched = patched.GetParameters();
+
+            List<ParameterInfo> parametersOriginal = new List<ParameterInfo>();
+            List<ParameterInfo> parametersPatched = new List<ParameterInfo>();
+
+            if (parameterInfosPatched != null)
+            {
+                for (int i = 0; i < parameterInfosPatched.Length; i++)
+                {
+                    if (parameterInfosPatched[i].Name.StartsWith("__"))
+                    {
+                        continue;
+                    }
+
+                    parametersPatched.Add(parameterInfosPatched[i]);
+                }
+
+                parameterInfosPatched = parametersPatched.ToArray();
+            }
+
+            if (parameterInfosOriginal != null)
+            {
+                for (int i = 0; i < parameterInfosOriginal.Length; i++)
+                {
+                    parametersOriginal.Add(parameterInfosOriginal[i]);
+                }
+
+                parameterInfosOriginal = parametersOriginal.ToArray();
+            }
+
+            if (parameterInfosPatched != null && parameterInfosOriginal != null)
+            {
+                if (parameterInfosOriginal.Length != parameterInfosPatched.Length)
+                {
+                    Logger.LogError($"[CRITICAL] Patched Method Parameters have Changed, patchedMethodName: {patchedMethodName}, originalMethodName {originalMethodName}");
+                }
             }
 
             HarmonyMethod patchedMethod = new HarmonyMethod(patched);
